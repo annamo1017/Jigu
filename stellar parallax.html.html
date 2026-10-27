@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>별의 연주시차 3D 시뮬레이션</title>
+<style>
+:root{--bg:#f6f7fb;--fg:#1c2030;--card:#fff;--mut:#5b6278;--bd:#d9ddea;--ac:#2f6df6;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1220;--fg:#e8ebf5;--card:#171c30;--mut:#9aa3bd;--bd:#2a3150;--ac:#6c97ff}}
+:root[data-theme="dark"]{--bg:#0e1220;--fg:#e8ebf5;--card:#171c30;--mut:#9aa3bd;--bd:#2a3150;--ac:#6c97ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Noto Sans KR","Malgun Gothic",sans-serif;line-height:1.5}
+main{max-width:1320px;margin:0 auto;padding:16px}
+h1{font-size:1.3rem;margin:0 0 4px}p.sub{margin:0 0 12px;color:var(--mut);font-size:.9rem}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:10px;margin-bottom:12px}
+.card h2{font-size:.95rem;margin:0 0 6px}
+canvas{display:block;width:100%;border-radius:8px;background:#0a0e1c;touch-action:none}
+#c3{height:460px}#cm{width:34%;height:340px;flex:none}#c2{flex:1;min-width:0;height:340px}
+.sky{display:flex;gap:10px}@media(max-width:700px){.sky{flex-direction:column}#cm{width:100%;height:250px}}
+.tb{display:flex;gap:18px;flex-wrap:wrap;align-items:center;margin-bottom:8px;font-size:.9rem}
+.ck{display:flex;gap:6px;align-items:center;cursor:pointer}.ck input{accent-color:var(--ac);width:16px;height:16px}
+.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0}
+.row label{min-width:100px;font-size:.9rem}input[type=range]{flex:1;min-width:140px;accent-color:var(--ac)}
+button{background:var(--bd);color:var(--fg);border:0;border-radius:8px;padding:8px 14px;font-size:.9rem;cursor:pointer}
+button.on{background:var(--ac);color:#fff}
+.val{font-variant-numeric:tabular-nums;font-size:.9rem;color:var(--mut)}
+.note{font-size:.88rem;margin:6px 0 0}.note b{color:var(--ac)}
+.hd{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}.hd h2{margin:0}.hd button{padding:5px 10px;font-size:.82rem}
+.card.fs{position:fixed;inset:0;z-index:40;margin:0;border-radius:0;display:flex;flex-direction:column;overflow:auto}.card.fs #c3{height:auto;flex:1;min-height:300px}body.nos{overflow:hidden}
+.lay{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:12px;align-items:start}
+.side{position:sticky;top:12px}
+.ctl{margin:0;max-height:calc(100vh - 24px);overflow:auto;color:var(--fg)}
+.ctl .row{gap:6px}.ctl .row label{min-width:0;width:100%}.ctl #bc{display:none}.ctl.min #cb{display:none}
+.card.fs{background:#000;color:#e8ebf5;border:0}.card.fs .note{color:#aab3cf}.card.fs .note b{color:#8fb0ff}.card.fs button{background:#2a3150;color:#e8ebf5}.card.fs canvas{border-radius:0}
+body.nos .side{position:fixed;right:12px;top:12px;width:290px;z-index:50}
+body.nos .ctl{--card:#12172a;--fg:#e8ebf5;--mut:#9aa3bd;--bd:#2a3150;--ac:#6c97ff;box-shadow:0 6px 24px rgba(0,0,0,.6)}
+@media(min-width:701px){body.nos .card.fs{padding-right:314px}}
+@media(max-width:700px){.lay{display:block}.side{position:fixed;left:8px;right:8px;bottom:8px;top:auto;z-index:50}body.nos .side{left:8px;right:8px;top:auto;bottom:8px;width:auto}.ctl{max-height:48vh;box-shadow:0 6px 24px rgba(0,0,0,.3)}.ctl #bc{display:inline-block}main{padding-bottom:140px}}
+</style></head><body><main>
+<h1>별의 연주시차 3D 시뮬레이션</h1>
+<p class="sub">드래그로 회전, 휠/핀치로 확대하세요. 3D 장면과 천구 모형(②)은 같은 각도로 함께 회전합니다.</p>
+<div class="lay"><div class="col"><div class="card"><div class="hd"><h2>① 3D 공간: 지구 공전과 천구 위 별의 위치</h2><button id="bf">⛶ 전체 화면</button></div>
+<div class="tb" id="tb"><b>표시할 별</b>
+ <label class="ck"><input type="checkbox" id="ckT" checked>별 T (가까운 별)</label>
+ <label class="ck"><input type="checkbox" id="ckS" checked>별 S (먼 별)</label></div>
+<canvas id="c3"></canvas>
+<p class="note">E₁(현재 지구) · E₂(6개월 뒤 지구). 지구에서 별을 향한 시선이 천구와 만나는 점(T₁, T₂, S₁, S₂)이 별의 위치입니다. <b>파란 지구를 마우스로 끌면</b> 공전 궤도를 따라 직접 움직일 수 있습니다.</p></div>
+<div class="card"><h2>② 지구에서 올려다본 밤하늘</h2>
+<div class="sky"><canvas id="cm"></canvas><canvas id="c2"></canvas></div>
+<p class="note"><b>왼쪽</b>은 지구를 둘러싼 천구 모형이고, <b>빨간 사각형</b> 안의 하늘이 <b>오른쪽</b> 화면입니다. 지구 위 관측자가 이 방향을 올려다보면, 지구가 공전하는 동안 가까운 별이 배경 별 사이에서 타원을 그리며 움직여 보입니다.</p></div>
+</div><aside class="side"><div class="card ctl" id="ctl"><div class="hd"><h2>조작</h2><button id="bc">접기 ▾</button></div><div id="cb">
+ <div class="row"><label>별 개수</label><button id="m2" class="on">두 별 비교 (T, S)</button><button id="m1">한 별의 거리 조절</button></div>
+ <div class="row" id="rd" style="display:none"><label>별까지 거리</label><input id="sd" type="range" min="15" max="60" value="25"><span class="val" id="vd"></span></div>
+ <div class="row"><label>지구의 위치</label><input id="sa" type="range" min="0" max="360" value="0"><span class="val" id="va"></span></div>
+ <div class="row"><button id="bp">▶ 공전 재생</button><button id="b6">6개월 뒤로 이동</button></div>
+ <p class="note" id="vp"></p>
+ <p class="note">시차각은 눈에 보이도록 크게 과장했습니다. 실제 연주시차는 1″보다 작고, <b>거리(pc) = 1/p(″)</b>입니다.</p></div></div></aside></div>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const R0=12,RS=70,RM=10,$=id=>document.getElementById(id),V=(x,y,z)=>new THREE.Vector3(x,y,z);
+let mode=2,dOne=25,ang=0,playing=false,az=Math.PI,el=0.45,dist=115,d2=40;
+const c3=$('c3'),c2=$('c2'),cm=$('cm'),ren=new THREE.WebGLRenderer({canvas:c3,antialias:true}),ren2=new THREE.WebGLRenderer({canvas:cm,antialias:true});
+const scene=new THREE.Scene(),sc2=new THREE.Scene(),cam=new THREE.PerspectiveCamera(50,1,0.1,1000),cam2=new THREE.PerspectiveCamera(40,1,0.1,200);
+const mk=(r,c,op,sc)=>{sc=sc||scene;const m=new THREE.Mesh(new THREE.SphereGeometry(r,20,16),new THREE.MeshBasicMaterial({color:c,transparent:op<1,opacity:op}));sc.add(m);return m;};
+const ln=(c,o,sc)=>{const l=new THREE.Line(new THREE.BufferGeometry(),new THREE.LineBasicMaterial({color:c,transparent:true,opacity:o}));(sc||scene).add(l);return l;};
+function lab(t,c,sc,w,h){const cv=document.createElement('canvas');cv.width=160;cv.height=64;const g=cv.getContext('2d');g.font='bold 38px sans-serif';g.fillStyle=c;g.textAlign='center';g.textBaseline='middle';g.fillText(t,80,32);const s=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv),depthTest:false,transparent:true}));s.scale.set(w||12,h||4.8,1);(sc||scene).add(s);return s;}
+// 방향/기저
+const ST={T:{dir:V(-.45,.5,.74).normalize(),col:0xffc94d,css:'#ffc94d'},S:{dir:V(.42,.55,.72).normalize(),col:0x7fe3ff,css:'#7fe3ff'}};
+const C=ST.T.dir.clone().add(ST.S.dir).normalize(),ey=V(0,1,0).sub(C.clone().multiplyScalar(C.y)).normalize(),ex=C.clone().cross(ey).normalize();
+const bgs=Array.from({length:450},()=>{const u=Math.random()*2-1,t=Math.random()*6.2832,s=Math.sqrt(1-u*u);return V(s*Math.cos(t),u,s*Math.sin(t));});
+// ---- 메인 장면
+const slab=new THREE.Mesh(new THREE.BoxGeometry(60,0.4,60),new THREE.MeshBasicMaterial({color:0x0b1a4a,transparent:true,opacity:.75}));slab.position.y=-0.3;scene.add(slab);
+const grid=new THREE.GridHelper(60,12,0x2a3f8a,0x1a2a66);grid.position.y=-0.05;scene.add(grid);
+ln(0x8fb0ff,1).geometry.setFromPoints(Array.from({length:97},(_,i)=>V(R0*Math.cos(i/96*6.2832),0,R0*Math.sin(i/96*6.2832))));
+const PH=Math.PI/2-1.1,PL=2.2,TH=0.35,TL=1.1,pg=()=>new THREE.SphereGeometry(RS,36,20,PH,PL,TH,TL);
+scene.add(new THREE.Mesh(pg(),new THREE.MeshBasicMaterial({color:0x16255e,transparent:true,opacity:.55,side:THREE.DoubleSide})));
+scene.add(new THREE.Mesh(pg(),new THREE.MeshBasicMaterial({color:0x5a78d0,wireframe:true,transparent:true,opacity:.12})));
+const bgp=[];for(let i=0;i<300;i++){const f=PH+Math.random()*PL,t=TH+Math.random()*TL;bgp.push(V(-RS*.995*Math.cos(f)*Math.sin(t),RS*.995*Math.cos(t),RS*.995*Math.sin(f)*Math.sin(t)));}
+scene.add(new THREE.Points(new THREE.BufferGeometry().setFromPoints(bgp),new THREE.PointsMaterial({color:0xffffff,size:1.1})));
+const sun=mk(2,0xffa726,1),earth=mk(1,0x3b8bff,1),earth2=mk(1,0x3b8bff,.45);
+const lSun=lab('태양','#ffd23f'),lE1=lab('지구 E₁','#8fc0ff'),lE2=lab('E₂','#8fc0ff'),lSph=lab('천구','#9ab4ff');
+lSun.position.set(0,5,0);lSph.position.set(-30,40,52);
+// ---- 천구 모형(지구 중심)
+mk(1.7,0x3b8bff,1,sc2);
+sc2.add(new THREE.Mesh(new THREE.SphereGeometry(RM,24,16),new THREE.MeshBasicMaterial({color:0x5a78d0,wireframe:true,transparent:true,opacity:.18})));
+sc2.add(new THREE.Mesh(new THREE.SphereGeometry(RM,24,16),new THREE.MeshBasicMaterial({color:0x16255e,transparent:true,opacity:.25,side:THREE.DoubleSide})));
+sc2.add(new THREE.Points(new THREE.BufferGeometry().setFromPoints(bgs.map(w=>w.clone().multiplyScalar(RM))),new THREE.PointsMaterial({color:0xffffff,size:.4})));
+const winL=ln(0xff5a6e,1,sc2),axis=ln(0xff5a6e,.6,sc2);axis.geometry.setFromPoints([V(0,0,0),C.clone().multiplyScalar(RM)]);
+lab('지구','#8fc0ff',sc2,4,1.6).position.set(0,-2.8,0);lab('천구','#9ab4ff',sc2,4,1.6).position.set(0,RM+1.6,0);
+for(const n in ST){const s=ST[n];
+ s.star=mk(1.4,s.col,1);s.m1=mk(1.3,s.col,1);s.m2=mk(1.3,s.col,.5);s.r1=ln(s.col,1);s.r2=ln(s.col,.5);s.rs=ln(0xffffff,.25);s.tr=ln(s.col,.5);
+ s.lb=lab(n,s.css);s.l1=lab(n+'₁',s.css);s.l2=lab(n+'₂',s.css);
+ s.d1=mk(.45,s.col,1,sc2);s.d2=mk(.45,s.col,.5,sc2);s.ray=ln(s.col,.6,sc2);s.tr3=ln(s.col,.5,sc2);s.k1=lab(n+'₁',s.css,sc2,4,1.6);s.k2=lab(n+'₂',s.css,sc2,4,1.6);
+ s.all=[s.star,s.m1,s.m2,s.r1,s.r2,s.rs,s.tr,s.lb,s.l1,s.l2,s.d1,s.d2,s.ray,s.tr3,s.k1,s.k2];}
+const dd=n=>n=='T'?(mode==2?24:dOne):50,pos=n=>ST[n].dir.clone().multiplyScalar(dd(n));
+function proj(E,s){const u=s.clone().sub(E).normalize(),b=E.dot(u),t=-b+Math.sqrt(b*b-E.lengthSq()+RS*RS);return E.clone().add(u.multiplyScalar(t));}
+const Ep=a=>V(R0*Math.cos(a),0,R0*Math.sin(a)),gd=(E,s)=>s.clone().sub(E).normalize(),up=(p,y)=>p.clone().add(V(0,y,0));
+function buildWin(){const W=c2.clientWidth,H=c2.clientHeight,X=W/H,pts=[];const q=(x,y)=>C.clone().add(ex.clone().multiplyScalar(x)).add(ey.clone().multiplyScalar(y)).normalize().multiplyScalar(RM*1.01);
+ for(let i=0;i<=20;i++)pts.push(q(-X+2*X*i/20,1));for(let i=0;i<=20;i++)pts.push(q(X,1-2*i/20));for(let i=0;i<=20;i++)pts.push(q(X-2*X*i/20,-1));for(let i=0;i<=20;i++)pts.push(q(-X,-1+2*i/20));winL.geometry.setFromPoints(pts);}
+function update(){
+ const a=ang*Math.PI/180,E1=Ep(a),E2=Ep(a+Math.PI),O=V(0,0,0),info=[];
+ earth.position.copy(E1);halo.position.copy(E1);earth2.position.copy(E2);lE1.position.copy(up(E1,3.5));lE2.position.copy(up(E2,3.5));
+ const names=mode==2?['T','S'].filter(n=>$(n=='T'?'ckT':'ckS').checked):['T'];
+ const dpr=Math.min(devicePixelRatio||1,2),W=c2.clientWidth,H=c2.clientHeight,g=c2.getContext('2d'),f=H/2;
+ g.setTransform(dpr,0,0,dpr,0,0);
+ const gr=g.createLinearGradient(0,0,0,H);gr.addColorStop(0,'#04061a');gr.addColorStop(1,'#1d2c63');g.fillStyle=gr;g.fillRect(0,0,W,H);
+ const sx=w=>{const t=w.dot(C);return[W/2+f*w.dot(ex)/t,H/2-f*w.dot(ey)/t];};
+ bgs.forEach((w,i)=>{if(w.dot(C)<.2)return;const p=sx(w),b=i%3==0?2:1;g.fillStyle='rgba(255,255,255,'+(.35+.5*((i*37)%10)/10)+')';g.fillRect(p[0],p[1],b,b);});
+ for(const n of ['T','S']){const s=ST[n],vis=names.includes(n);s.all.forEach(o=>o.visible=vis);if(!vis)continue;
+  const sp=pos(n),P1=proj(E1,sp),P2=proj(E2,sp),P0=proj(O,sp),u1=gd(E1,sp),u2=gd(E2,sp);
+  s.star.position.copy(sp);s.m1.position.copy(P1);s.m2.position.copy(P2);
+  s.r1.geometry.setFromPoints([E1,P1]);s.r2.geometry.setFromPoints([E2,P2]);s.rs.geometry.setFromPoints([O,P0]);
+  const tr=[],ug=[];for(let i=0;i<=120;i++){const E=Ep(i/120*6.2832);tr.push(proj(E,sp));ug.push(gd(E,sp));}
+  s.tr.geometry.setFromPoints(tr);s.tr3.geometry.setFromPoints(ug.map(u=>u.clone().multiplyScalar(RM)));
+  s.lb.position.copy(up(sp,3.5));s.l1.position.copy(up(P1,4));s.l2.position.copy(up(P2,4));
+  s.d1.position.copy(u1).multiplyScalar(RM);s.d2.position.copy(u2).multiplyScalar(RM);s.ray.geometry.setFromPoints([O,s.d1.position.clone()]);
+  s.k1.position.copy(up(s.d1.position,1.2));s.k2.position.copy(up(s.d2.position,1.2));
+  const p1=sx(u1),p2=sx(u2),p0=sx(s.dir);
+  g.strokeStyle=s.css;g.globalAlpha=.5;g.lineWidth=1.5;g.beginPath();ug.forEach((u,i)=>{const p=sx(u);i?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1]);});g.stroke();
+  g.setLineDash([4,4]);g.beginPath();g.moveTo(p1[0],p1[1]);g.lineTo(p2[0],p2[1]);g.stroke();
+  g.globalAlpha=.8;g.beginPath();g.arc(p0[0],p0[1],9,0,6.2832);g.stroke();g.setLineDash([]);
+  g.globalAlpha=1;g.fillStyle=s.css;g.shadowColor=s.css;g.shadowBlur=16;g.beginPath();g.arc(p1[0],p1[1],6,0,6.2832);g.fill();
+  g.globalAlpha=.45;g.beginPath();g.arc(p2[0],p2[1],6,0,6.2832);g.fill();g.shadowBlur=0;g.globalAlpha=1;
+  g.font='bold 13px sans-serif';g.fillText(n+'₁ (지금)',p1[0]+10,p1[1]-8);g.globalAlpha=.7;g.fillText(n+'₂ (6개월 뒤)',p2[0]+10,p2[1]-8);g.globalAlpha=1;
+  info.push([n,Math.atan(R0/dd(n))*180/Math.PI,dd(n)]);}
+ g.fillStyle='#03050d';g.beginPath();g.moveTo(0,H);g.lineTo(0,H-22);g.quadraticCurveTo(W/2,H-46,W,H-22);g.lineTo(W,H);g.fill();
+ g.fillStyle='#cfd6ee';g.font='12px sans-serif';g.fillText('🔭 지구 위 관측자의 시점',W/2-62,H-8);
+ g.fillText('지구(E₁)에서 올려다본 밤하늘  |  ○ 태양에서 본 기준 위치  ● 지금  ◐ 6개월 뒤',10,18);
+ $('va').textContent=ang+'° ('+(ang/30).toFixed(1)+'개월)';$('vd').textContent=dOne;
+ $('vp').innerHTML=info.map(x=>'별 '+x[0]+' (거리 '+x[2]+'): 시차각 p ≈ <b>'+x[1].toFixed(1)+'°</b>').join('<br>')+(info.length==2?'<br>→ 가까운 별 T의 연주시차가 더 큽니다.':'');
+}
+function resize(){const dpr=Math.min(devicePixelRatio||1,2);
+ ren.setPixelRatio(dpr);ren.setSize(c3.clientWidth,c3.clientHeight,false);cam.aspect=c3.clientWidth/c3.clientHeight;cam.updateProjectionMatrix();
+ ren2.setPixelRatio(dpr);ren2.setSize(cm.clientWidth,cm.clientHeight,false);cam2.aspect=cm.clientWidth/cm.clientHeight;cam2.updateProjectionMatrix();
+ d2=11.5/Math.sin(Math.atan(Math.min(1,cam2.aspect)*Math.tan(0.349)));
+ c2.width=c2.clientWidth*dpr;c2.height=c2.clientHeight*dpr;buildWin();update();}
+function draw(){const cx=Math.cos(el)*Math.sin(az),cy=Math.sin(el),cz=Math.cos(el)*Math.cos(az);
+ cam.position.set(dist*cx,dist*cy,dist*cz);cam.lookAt(0,12,15);ren.render(scene,cam);
+ cam2.position.set(d2*cx,d2*cy,d2*cz);cam2.lookAt(0,0,0);ren2.render(sc2,cam2);}
+function bindDrag(c,zoom){let dr=false,lx=0,ly=0;
+ c.addEventListener('pointerdown',e=>{if(c===c3&&earthHit(e))return;dr=true;lx=e.clientX;ly=e.clientY;c.setPointerCapture(e.pointerId)});
+ c.addEventListener('pointerup',()=>dr=false);
+ c.addEventListener('pointermove',e=>{if(!dr)return;az-=(e.clientX-lx)*0.008;el=Math.max(-1.2,Math.min(1.4,el+(e.clientY-ly)*0.008));lx=e.clientX;ly=e.clientY;});
+ if(zoom)c.addEventListener('wheel',e=>{e.preventDefault();dist=Math.max(40,Math.min(200,dist*(1+e.deltaY*0.001)));},{passive:false});}
+bindDrag(c3,true);bindDrag(cm,false);
+const rc=new THREE.Raycaster(),rcv=new THREE.Vector2(),halo=mk(2.1,0x6cb2ff,.2);let eDrag=false;
+function aim(e){const r=c3.getBoundingClientRect();rcv.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);rc.setFromCamera(rcv,cam);}
+function earthHit(e){aim(e);return rc.ray.distanceToPoint(earth.position)<2.4;}
+c3.addEventListener('pointerdown',e=>{if(!earthHit(e))return;eDrag=true;c3.setPointerCapture(e.pointerId);c3.style.cursor='grabbing';if(playing){playing=false;$('bp').textContent='▶ 공전 재생';}});
+c3.addEventListener('pointermove',e=>{if(!eDrag){c3.style.cursor=earthHit(e)?'grab':'';return;}aim(e);const p=V(0,0,0);if(!rc.ray.intersectPlane(new THREE.Plane(V(0,1,0),0),p))return;ang=((Math.round(Math.atan2(p.z,p.x)*180/Math.PI)%360)+360)%360;$('sa').value=ang;update();});
+c3.addEventListener('pointerup',()=>{eDrag=false;c3.style.cursor='';});
+$('sa').oninput=e=>{ang=+e.target.value;update();};
+$('sd').oninput=e=>{dOne=+e.target.value;update();};
+$('ckT').onchange=()=>{if(!$('ckT').checked&&!$('ckS').checked)$('ckS').checked=true;update();};
+$('ckS').onchange=()=>{if(!$('ckT').checked&&!$('ckS').checked)$('ckT').checked=true;update();};
+const setMode=m=>{mode=m;$('m2').className=m==2?'on':'';$('m1').className=m==1?'on':'';$('rd').style.display=m==1?'flex':'none';$('tb').style.display=m==2?'flex':'none';update();};
+$('m2').onclick=()=>setMode(2);$('m1').onclick=()=>setMode(1);
+$('bp').onclick=()=>{playing=!playing;$('bp').textContent=playing?'⏸ 일시정지':'▶ 공전 재생';};
+$('b6').onclick=()=>{ang=(ang+180)%360;$('sa').value=ang;update();};
+addEventListener('resize',resize);
+
+const card1=c3.parentElement;
+function setFs(on){card1.classList.toggle('fs',on);document.body.classList.toggle('nos',on);$('bf').textContent=on?'✕ 닫기':'⛶ 전체 화면';
+ if(on){try{document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen().catch(()=>{});}catch(e){}}
+ else if(document.fullscreenElement){try{document.exitFullscreen();}catch(e){}}
+ setTimeout(resize,60);}
+$('bf').onclick=()=>setFs(!card1.classList.contains('fs'));
+document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&card1.classList.contains('fs'))setFs(false);});
+addEventListener('keydown',e=>{if(e.key==='Escape'&&card1.classList.contains('fs'))setFs(false);});
+$('bc').onclick=()=>{const m=$('ctl').classList.toggle('min');$('bc').textContent=m?'펼치기 ▴':'접기 ▾';};
+
+(function loop(){if(playing){ang=(ang+0.5)%360;$('sa').value=Math.round(ang);update();}draw();requestAnimationFrame(loop);})();
+resize();
+</script></body></html>
