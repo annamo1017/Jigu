@@ -92,7 +92,7 @@ for(const n in ST){const s=ST[n];
  s.all=[s.star,s.m1,s.m2,s.r1,s.r2,s.rs,s.tr,s.lb,s.l1,s.l2,s.d1,s.d2,s.ray,s.tr3,s.k1,s.k2];}
 const dd=n=>n=='T'?(mode==2?24:dOne):50,pos=n=>ST[n].dir.clone().multiplyScalar(dd(n));
 function proj(E,s){const u=s.clone().sub(E).normalize(),b=E.dot(u),t=-b+Math.sqrt(b*b-E.lengthSq()+RS*RS);return E.clone().add(u.multiplyScalar(t));}
-const Ep=a=>V(R0*Math.cos(a),0,R0*Math.sin(a)),gd=(E,s)=>s.clone().sub(E).normalize(),up=(p,y)=>p.clone().add(V(0,y,0));
+const Ep=a=>V(R0*Math.cos(a),0,-R0*Math.sin(a)),gd=(E,s)=>s.clone().sub(E).normalize(),up=(p,y)=>p.clone().add(V(0,y,0));
 function buildWin(){const W=c2.clientWidth,H=c2.clientHeight,X=W/H,pts=[];const q=(x,y)=>C.clone().add(ex.clone().multiplyScalar(x)).add(ey.clone().multiplyScalar(y)).normalize().multiplyScalar(RM*1.01);
  for(let i=0;i<=20;i++)pts.push(q(-X+2*X*i/20,1));for(let i=0;i<=20;i++)pts.push(q(X,1-2*i/20));for(let i=0;i<=20;i++)pts.push(q(X-2*X*i/20,-1));for(let i=0;i<=20;i++)pts.push(q(-X,-1+2*i/20));winL.geometry.setFromPoints(pts);}
 function update(){
@@ -145,7 +145,7 @@ const rc=new THREE.Raycaster(),rcv=new THREE.Vector2(),halo=mk(2.1,0x6cb2ff,.2);
 function aim(e){const r=c3.getBoundingClientRect();rcv.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);rc.setFromCamera(rcv,cam);}
 function earthHit(e){aim(e);return rc.ray.distanceToPoint(earth.position)<2.4;}
 c3.addEventListener('pointerdown',e=>{if(!earthHit(e))return;eDrag=true;c3.setPointerCapture(e.pointerId);c3.style.cursor='grabbing';if(playing){playing=false;$('bp').textContent='▶ 공전 재생';}});
-c3.addEventListener('pointermove',e=>{if(!eDrag){c3.style.cursor=earthHit(e)?'grab':'';return;}aim(e);const p=V(0,0,0);if(!rc.ray.intersectPlane(new THREE.Plane(V(0,1,0),0),p))return;ang=((Math.round(Math.atan2(p.z,p.x)*180/Math.PI)%360)+360)%360;$('sa').value=ang;update();});
+c3.addEventListener('pointermove',e=>{if(!eDrag){c3.style.cursor=earthHit(e)?'grab':'';return;}aim(e);const p=V(0,0,0);if(!rc.ray.intersectPlane(new THREE.Plane(V(0,1,0),0),p))return;ang=((Math.round(Math.atan2(-p.z,p.x)*180/Math.PI)%360)+360)%360;$('sa').value=ang;update();});
 c3.addEventListener('pointerup',()=>{eDrag=false;c3.style.cursor='';});
 $('sa').oninput=e=>{ang=+e.target.value;update();};
 $('sd').oninput=e=>{dOne=+e.target.value;update();};
