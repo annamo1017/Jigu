@@ -283,6 +283,15 @@
   .lspad button:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,.1); }
   .lspad button.del { background: #ffe0e6; font-size: 26px; }
 
+  /* 손 */
+  .hands { display: flex; gap: 6px; justify-content: center; align-items: flex-end; }
+  svg.hand { width: min(46vw, 200px); height: auto; }
+  .mabox svg.hand.one { width: min(40vw, 165px); }
+  .mabox svg.hand.lg { width: min(62vw, 240px); }
+  svg.hand .fg { transition: fill .2s; }
+  svg.hand .fg.lit { fill: #ffe36e; }
+  svg.hand .fg.gone { fill: #fff; stroke: #e0445e; stroke-dasharray: 4 3; opacity: .85; }
+
   /* 더하기 빼기 */
   .mabox { flex: 1; width: 100%; max-width: 640px; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 6px 12px; min-height: 0; flex-wrap: wrap; }
   .magrp { background: #fff; border-radius: 22px; padding: 10px; box-shadow: 0 5px 0 rgba(0,0,0,.07); display: grid; grid-template-columns: repeat(var(--cols, 3), auto); gap: 2px 6px; justify-content: center; }
@@ -398,6 +407,15 @@
   </div>
 </section>
 
+<!-- ================= 숫자: 손가락 세기 ================= -->
+<section class="view hidden" id="fingers">
+  <div class="bar"><div class="navbtns"><button class="nb" data-home><b>⬅️</b>뒤로</button><button class="nb" data-tohome><b>🏠</b>처음</button></div><div class="ttl">손가락 세기</div><span style="width:104px"></span></div>
+  <div class="seg" id="fgLevels"><button data-n="5">🐣 1~5 (한 손)</button><button data-n="10">🐥 1~10 (두 손)</button></div>
+  <div class="msg" id="fgMsg"></div>
+  <div class="cnbox" id="fgBox"></div>
+  <div class="hchoices" id="fgChoices" style="padding-bottom:18px"></div>
+</section>
+
 <!-- ================= 숫자: 세어 보기 ================= -->
 <section class="view hidden" id="count">
   <div class="bar"><div class="navbtns"><button class="nb" data-home><b>⬅️</b>뒤로</button><button class="nb" data-tohome><b>🏠</b>처음</button></div><div class="ttl">세어 보기</div><span style="width:104px"></span></div>
@@ -445,7 +463,7 @@
 <!-- ================= 숫자: 더하기 빼기 ================= -->
 <section class="view hidden" id="math">
   <div class="bar"><div class="navbtns"><button class="nb" data-home><b>⬅️</b>뒤로</button><button class="nb" data-tohome><b>🏠</b>처음</button></div><div class="ttl">더하기 빼기</div><span style="width:104px"></span></div>
-  <div class="seg" id="maLevels"><button data-n="1">🐣 더하기 5까지</button><button data-n="2">🐥 더하기 10까지</button><button data-n="3">🐔 빼기</button><button data-n="4">🦅 섞어서</button></div>
+  <div class="seg" id="maLevels"><button data-n="1">🐣 더하기 5</button><button data-n="2">🐥 빼기 5</button><button data-n="3">🐔 더하기 10</button><button data-n="4">🦅 빼기 10</button><button data-n="5">🦉 섞어서</button></div>
   <div class="msg" id="maMsg"></div>
   <div class="mabox" id="maBox"></div>
   <div class="maeq" id="maEq"></div>
@@ -1052,8 +1070,13 @@ $('stkShelf').addEventListener('click', () => {
    ========================================================= */
 const GAMES = {};
 let current = 'home';
+// 놀이 중 예약한 '다음 문제' 타이머들 (단계 바꿀 때·화면 옮길 때 모두 취소)
+const GT = [];
+function gT(fn, ms) { const id = setTimeout(() => { const k = GT.indexOf(id); if (k >= 0) GT.splice(k, 1); fn(); }, ms); GT.push(id); return id; }
+function gClear() { GT.splice(0).forEach(clearTimeout); }
 let lastCat = null;
 function go(name, arg) {
+  gClear();
   if (GAMES[current] && GAMES[current].exit) GAMES[current].exit();
   document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
   document.querySelectorAll('.cheer').forEach(c => c.remove());
@@ -1070,7 +1093,7 @@ const CATS = {
   mem: ['🧠 기억력', [['memory','🃏','카드 뒤집기','#7ec8ff',null,1], ['match','🔍','같은 그림 찾기','#ff8fab',null,2]]],
   art: ['🎨 그림놀이', [['draw','🖍️','그림판','#f37fd0',null,1], ['color','🎨','색칠하기','#6ccf8a',null,1], ['trace','✏️','따라 그리기','#ffb347',null,2]]],
   han: ['가 한글놀이', [['hangul','가','가나다 카드','#9b8cff',null,1], ['write','✏️','따라 쓰기','#5aa9e6',null,2], ['stair','🪜','한글 계단','#ff7a6b',null,2], ['balloon','🎈','한글 풍선','#ffb347',null,3]]],
-  num: ['🔢 숫자놀이', [['count','🍎','세어 보기','#ff8fab',null,1], ['more','⚖️','어느 쪽이 많을까','#ffb347',null,1], ['blocks','🧱','같은 수 블록','#ff7a6b',null,2], ['order','🔢','차례대로 콕콕','#6ccf8a',null,2], ['write','✏️','숫자 쓰기','#5aa9e6','num',2], ['listen','👂','듣고 숫자 누르기','#4fc3b8',null,3], ['math','➕','더하기 빼기','#9b8cff',null,3]]]
+  num: ['🔢 숫자놀이', [['fingers','✋','손가락 세기','#ffb3c7',null,1], ['count','🍎','세어 보기','#ff8fab',null,1], ['more','⚖️','어느 쪽이 많을까','#ffb347',null,1], ['blocks','🧱','같은 수 블록','#ff7a6b',null,2], ['order','🔢','차례대로 콕콕','#6ccf8a',null,2], ['write','✏️','숫자 쓰기','#5aa9e6','num',2], ['listen','👂','듣고 숫자 누르기','#4fc3b8',null,3], ['math','➕','더하기 빼기','#9b8cff',null,3]]]
 };
 function openCat(k) {
   lastCat = k; const [title, games] = CATS[k];
@@ -1417,7 +1440,7 @@ const COUNT_WORD = ['하나!','둘!','셋!','넷!','다섯!','여섯!','일곱!'
 (() => {
   const SETS = 3;
   let n = store.get('kk.mem.n', 6), open = [], lock = false, matched = 0, tries = 0, done = 0;
-  const startSet = () => { done = 0; setProg('memory', 0, SETS); deal(); };
+  const startSet = () => { gClear(); done = 0; setProg('memory', 0, SETS); deal(); };
   const grid = $('memGrid');
   function layout() {
     const W = grid.clientWidth - 28, H = grid.clientHeight - 24, gap = 10;
@@ -1456,8 +1479,8 @@ const COUNT_WORD = ['하나!','둘!','셋!','넷!','다섯!','여섯!','일곱!'
         $('memMsg').textContent = `${s1[0]} ${s1[1]} 짝꿍 찾았다!`;
         if (matched === n) {
           done++; setProg('memory', done, SETS);
-          if (done >= SETS) setTimeout(() => finish('카드 뒤집기 완성!', `우와! ${SETS}판 다 했어요!`, startSet), 700);
-          else setTimeout(() => cheer('🎉', '다 찾았어요!', `우와! 다 찾았어요! ${SETS - done}판 남았어요`, deal), 700);
+          if (done >= SETS) gT(() => finish('카드 뒤집기 완성!', `우와! ${SETS}판 다 했어요!`, startSet), 700);
+          else gT(() => cheer('🎉', '다 찾았어요!', `우와! 다 찾았어요! ${SETS - done}판 남았어요`, deal), 700);
         }
       }, 350);
     } else {
@@ -2232,18 +2255,18 @@ const COUNT_THINGS = [['🍎','사과'],['🍌','바나나'],['🍓','딸기'],[
       const its = [...$('cnBox').children];
       say(COUNT_WORD.slice(0, ans).join(' ') + ` ${COUNTER[ans]}!`);
       const gap = ans > 10 ? 260 : 420;
-      its.forEach((it, i) => setTimeout(() => { it.classList.add('on'); it.dataset.n = i + 1; tone(520 + i * 30, 0, .1, 'triangle', .12); }, i * gap));
-      setTimeout(() => {
+      its.forEach((it, i) => gT(() => { it.classList.add('on'); it.dataset.n = i + 1; tone(520 + i * 30, 0, .1, 'triangle', .12); }, i * gap));
+      gT(() => {
         $('cnMsg').textContent = `${COUNTER[ans]}! ${pick(PRAISE)}`; SND.yay(); burst($('cnBox'), 10);
         q++; setProg('count', q, QN);
-        if (q >= QN) setTimeout(() => finish('세어 보기 완성!', `우와! ${QN}문제 다 맞혔어요!`, start), 700);
-        else setTimeout(next, 1500);
+        if (q >= QN) gT(() => finish('세어 보기 완성!', `우와! ${QN}문제 다 맞혔어요!`, start), 700);
+        else gT(next, 1500);
       }, ans * gap + 300);
     } else {
       b.classList.remove('no'); void b.offsetWidth; b.classList.add('no'); SND.boop(); say(`${n}? 다시 세어 봐요`);
     }
   }
-  function start() { q = 0; setProg('count', 0, QN); next(); }
+  function start() { gClear(); q = 0; setProg('count', 0, QN); next(); }
   $('cnLevels').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; max = +b.dataset.n; store.set('kk.cn.max', max); segSelect($('cnLevels'), 'n', max); start(); });
   $('cnBox').addEventListener('click', () => thing && say(`${thing[1]}${josa(thing[1], '가', '이')} 몇 개일까요?`));
   GAMES.count = { enter() { segSelect($('cnLevels'), 'n', max); start(); } };
@@ -2283,15 +2306,15 @@ const COUNT_THINGS = [['🍎','사과'],['🍌','바나나'],['🍓','딸기'],[
       nextN++;
       if (nextN > max) {
         done++; setProg('order', done, SETS);
-        if (done >= SETS) setTimeout(() => finish('차례대로 완성!', `우와! ${SETS}판 다 했어요!`, start), 700);
-        else setTimeout(() => cheer('🔢', `${max}까지 다 했어요!`, `우와! ${SINO[max]}까지 다 했어요!`, round), 600);
+        if (done >= SETS) gT(() => finish('차례대로 완성!', `우와! ${SETS}판 다 했어요!`, start), 700);
+        else gT(() => cheer('🔢', `${max}까지 다 했어요!`, `우와! ${SINO[max]}까지 다 했어요!`, round), 600);
       } else $('odMsg').textContent = `다음은 ${nextN}!`;
     } else {
       SND.boop(); b.classList.remove('no'); void b.offsetWidth; b.classList.add('no');
       $('odMsg').textContent = `${n}가 아니라 ${nextN}을 찾아요!`; say(`다음은 ${SINO[nextN]}!`);
     }
   }
-  function start() { done = 0; setProg('order', 0, SETS); round(); }
+  function start() { gClear(); done = 0; setProg('order', 0, SETS); round(); }
   $('odLevels').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; max = +b.dataset.n; store.set('kk.od.max', max); segSelect($('odLevels'), 'n', max); start(); });
   GAMES.order = { enter() { segSelect($('odLevels'), 'n', max); requestAnimationFrame(start); }, resize() { round(); } };
 })();
@@ -2320,13 +2343,13 @@ const COUNT_THINGS = [['🍎','사과'],['🍌','바나나'],['🍓','딸기'],[
       $('mrMsg').textContent = `${t[0]} ${COUNTER[mine]}! 더 많아요!`;
       say(`${t[1]}${josa(t[1], '가', '이')} 더 많아요! ${COUNTER[mine]}, ${COUNTER[other]}`);
       q++; setProg('more', q, QN);
-      if (q >= QN) setTimeout(() => finish('많다 적다 박사!', `우와! ${QN}문제 다 맞혔어요!`, start), 1800);
-      else setTimeout(next, 2400);
+      if (q >= QN) gT(() => finish('많다 적다 박사!', `우와! ${QN}문제 다 맞혔어요!`, start), 1800);
+      else gT(next, 2400);
     } else {
       el.classList.remove('no'); void el.offsetWidth; el.classList.add('no'); SND.boop(); say('다시 세어 봐요!');
     }
   }
-  function start() { q = 0; setProg('more', 0, QN); next(); }
+  function start() { gClear(); q = 0; setProg('more', 0, QN); next(); }
   $('mrA').addEventListener('click', () => choose('A')); $('mrB').addEventListener('click', () => choose('B'));
   $('mrLevels').addEventListener('click', e => { const x = e.target.closest('button'); if (!x) return; max = +x.dataset.n; store.set('kk.mr.max', max); segSelect($('mrLevels'), 'n', max); start(); });
   GAMES.more = { enter() { segSelect($('mrLevels'), 'n', max); start(); } };
@@ -2392,18 +2415,18 @@ const COUNT_THINGS = [['🍎','사과'],['🍌','바나나'],['🍓','딸기'],[
     if (v === n) {
       lock = true; b.classList.add('yes'); SND.yay(); burst(b, 10);
       // 블록 하나하나에 번호
-      [$('bkTarget'), b].forEach(z => [...z.querySelectorAll('i')].forEach((x, i) => setTimeout(() => { x.textContent = i + 1; x.classList.add('on'); }, i * 160)));
+      [$('bkTarget'), b].forEach(z => [...z.querySelectorAll('i')].forEach((x, i) => gT(() => { x.textContent = i + 1; x.classList.add('on'); }, i * 160)));
       $('bkMsg').textContent = `둘 다 ${n}개! 모양은 달라도 개수는 같아요`;
       say(`둘 다 ${COUNTER[n]}! 모양은 달라도 개수는 같아요!`);
       q++; setProg('blocks', q, QN);
-      if (q >= QN) setTimeout(() => finish('블록 박사!', `우와! ${QN}문제 다 맞혔어요!`, start), 2200);
-      else setTimeout(next, 3000);
+      if (q >= QN) gT(() => finish('블록 박사!', `우와! ${QN}문제 다 맞혔어요!`, start), 2200);
+      else gT(next, 3000);
     } else {
       b.classList.remove('no'); void b.offsetWidth; b.classList.add('no'); SND.boop();
       say(`그건 ${COUNTER[v]}예요. 다시 세어 봐요!`);
     }
   }
-  function start() { q = 0; setProg('blocks', 0, QN); next(); }
+  function start() { gClear(); q = 0; setProg('blocks', 0, QN); next(); }
   $('bkLevels').addEventListener('click', e => { const x = e.target.closest('button'); if (!x) return; max = +x.dataset.n; store.set('kk.bk.max', max); segSelect($('bkLevels'), 'n', max); start(); });
   GAMES.blocks = { enter() { segSelect($('bkLevels'), 'n', max); start(); } };
 })();
@@ -2435,13 +2458,13 @@ const COUNT_THINGS = [['🍎','사과'],['🍌','바나나'],['🍓','딸기'],[
         lock = true; slots('ok'); SND.yay(); burst($('lsSlots'), 12);
         $('lsMsg').textContent = `${n}! ${pick(PRAISE)}`; say(`${read()}! ${pick(PRAISE)}`);
         q++; setProg('listen', q, QN);
-        if (q >= QN) setTimeout(() => finish('숫자 듣기 박사!', `우와! ${QN}문제 다 맞혔어요!`, start), 1400);
-        else setTimeout(next, 1800);
+        if (q >= QN) gT(() => finish('숫자 듣기 박사!', `우와! ${QN}문제 다 맞혔어요!`, start), 1400);
+        else gT(next, 1800);
       } else {
         lock = true; SND.boop(); slots('no');
         $('lsMsg').textContent = `${typed.join('')}가 아니에요. 다시 들어 봐요!`;
         say(`${sinoNum(+typed.join(''))}가 아니에요. ${read()}!`);
-        setTimeout(() => { typed = []; lock = false; slots(); }, 900);
+        gT(() => { typed = []; lock = false; slots(); }, 900);
       }
     }
   }
@@ -2454,15 +2477,95 @@ const COUNT_THINGS = [['🍎','사과'],['🍌','바나나'],['🍓','딸기'],[
     pad.appendChild(b);
   });
   $('lsSpk').addEventListener('click', () => say(read()));
-  function start() { q = 0; setProg('listen', 0, QN); next(); }
+  function start() { gClear(); q = 0; setProg('listen', 0, QN); next(); }
   $('lsLevels').addEventListener('click', e => { const x = e.target.closest('button'); if (!x) return; max = +x.dataset.n; store.set('kk.ls.max', max); segSelect($('lsLevels'), 'n', max); start(); });
   GAMES.listen = { enter() { segSelect($('lsLevels'), 'n', max); start(); } };
+})();
+
+/* ---------- 손 그림 (손가락 펴기/접기) ---------- */
+// 손가락 순서: 검지 · 중지 · 약지 · 새끼 · 엄지 (하나 셀 때마다 이 순서로 펴요)
+const FINGER_GEO = [[24, 14, 13], [39, 6, 13], [54, 12, 13], [68, 24, 11]];
+function handEl(n, gone = 0, mirror = false) {
+  const NS = 'http://www.w3.org/2000/svg', mk = (t, a) => { const e = document.createElementNS(NS, t); for (const k in a) e.setAttribute(k, a[k]); return e; };
+  const svg = mk('svg', { viewBox: '-24 0 148 118', class: 'hand' });
+  const g = mk('g', mirror ? { transform: 'translate(100 0) scale(-1 1)' } : {});
+  svg.appendChild(g);
+  const skin = { fill: '#ffd9b8', stroke: '#c98d63', 'stroke-width': 2.5 };
+  const state = i => i < n ? (i >= n - gone ? 'gone' : 'up') : 'down';
+  const fingers = [];
+  // 편 손가락 (손바닥 뒤)
+  FINGER_GEO.forEach(([x, top, w], i) => {
+    if (state(i) === 'down') return;
+    const r = mk('rect', Object.assign({ x, y: top, width: w, height: 72 - top, rx: w / 2, class: 'fg', 'data-i': i }, skin));
+    g.appendChild(r); fingers[i] = r;
+  });
+  if (state(4) !== 'down') { const t = mk('rect', Object.assign({ x: 6, y: 44, width: 15, height: 42, rx: 7.5, transform: 'rotate(-38 21 84)', class: 'fg', 'data-i': 4 }, skin)); g.appendChild(t); fingers[4] = t; }
+  g.appendChild(mk('rect', Object.assign({ x: 19, y: 50, width: 62, height: 60, rx: 22 }, skin)));
+  // 접은 손가락 (손바닥 위 마디)
+  FINGER_GEO.forEach(([x, , w], i) => { if (state(i) === 'down') g.appendChild(mk('rect', Object.assign({ x, y: 52, width: w, height: 17, rx: w / 2 }, skin))); });
+  if (state(4) === 'down') g.appendChild(mk('rect', Object.assign({ x: 22, y: 74, width: 32, height: 13, rx: 6.5 }, skin)));
+  // 없어질 손가락 표시
+  fingers.forEach((f, i) => {
+    if (!f || state(i) !== 'gone') return;
+    f.classList.add('gone');
+    const bb = i === 4 ? [2, 62] : [FINGER_GEO[i][0] + FINGER_GEO[i][2] / 2, FINGER_GEO[i][1] + 14];
+    const x = mk('text', { x: bb[0], y: bb[1], 'text-anchor': 'middle', 'font-size': 14, fill: '#e0445e', class: 'fx', 'font-weight': 700 });
+    if (mirror) x.setAttribute('transform', `translate(${2 * bb[0]} 0) scale(-1 1)`);
+    x.textContent = '✖'; g.appendChild(x);
+  });
+  svg._fingers = [0, 1, 2, 3, 4].map(i => fingers[i]).filter(Boolean);
+  return svg;
+}
+// 손가락 수만큼 손 1~2개
+function handsFor(n, gone = 0) {
+  const w = document.createElement('div'); w.className = 'hands';
+  if (n <= 5) w.appendChild(handEl(n, gone));
+  else { w.appendChild(handEl(5, 0, true)); w.appendChild(handEl(n - 5, gone)); }
+  return w;
+}
+// 편 손가락에 하나씩 불 켜기
+function lightFingers(container, count, gap = 400) {
+  const fs = [...container.querySelectorAll('svg.hand')].flatMap(s => s._fingers.filter(f => !f.classList.contains('gone')));
+  fs.slice(0, count).forEach((f, i) => gT(() => { f.classList.add('lit'); tone(520 + i * 50, 0, .1, 'triangle', .12); }, i * gap));
+}
+
+/* ---------- 18. 손가락 세기 ---------- */
+(() => {
+  const QN = 10;
+  let max = store.get('kk.fg.max', 5), q = 0, n = 0, last = 0, lock = false;
+  function next() {
+    lock = false;
+    do { n = 1 + Math.floor(Math.random() * max); } while (n === last && max > 1); last = n;
+    const box = $('fgBox'); box.innerHTML = ''; box.appendChild(handsFor(n));
+    const opts = new Set([n]);
+    while (opts.size < 3) { const o = n + pick([-2, -1, 1, 2]); if (o >= 1 && o <= Math.max(max, 5)) opts.add(o); }
+    const c = $('fgChoices'); c.innerHTML = '';
+    shuffle([...opts]).forEach(v => { const b = document.createElement('button'); b.className = 'hchoice'; b.style.setProperty('--hc', '#e8698a'); b.textContent = v; b.addEventListener('click', () => choose(b, v)); c.appendChild(b); });
+    $('fgMsg').textContent = '손가락 몇 개를 폈을까요?'; say('손가락 몇 개를 폈을까요?');
+  }
+  function choose(b, v) {
+    if (lock) return;
+    if (v === n) {
+      lock = true; b.classList.add('yes'); SND.ding();
+      say(COUNT_WORD.slice(0, n).join(' ') + ` ${COUNTER[n]}!`);
+      lightFingers($('fgBox'), n, n > 5 ? 300 : 420);
+      gT(() => {
+        $('fgMsg').textContent = `${n}개! ${pick(PRAISE)}`; SND.yay(); burst($('fgBox'), 10);
+        q++; setProg('fingers', q, QN);
+        if (q >= QN) gT(() => finish('손가락 박사!', `우와! ${QN}문제 다 맞혔어요!`, start), 700);
+        else gT(next, 1400);
+      }, n * (n > 5 ? 300 : 420) + 300);
+    } else { b.classList.remove('no'); void b.offsetWidth; b.classList.add('no'); SND.boop(); say('손가락을 하나씩 세어 봐요!'); }
+  }
+  function start() { gClear(); q = 0; setProg('fingers', 0, QN); next(); }
+  $('fgLevels').addEventListener('click', e => { const x = e.target.closest('button'); if (!x) return; max = +x.dataset.n; store.set('kk.fg.max', max); segSelect($('fgLevels'), 'n', max); start(); });
+  GAMES.fingers = { enter() { segSelect($('fgLevels'), 'n', max); start(); } };
 })();
 
 /* ---------- 15. 더하기 빼기 ---------- */
 (() => {
   const QN = 10;
-  let lv = store.get('kk.ma.lv', 1), q = 0, a = 0, b = 0, op = '+', ans = 0, thing = null, lock = false;
+  let lv = store.get('kk.ma.lv2', 1), q = 0, a = 0, b = 0, op = '+', ans = 0, thing = null, lock = false, hands = false;
   const grp = (n, gone = 0) => {
     const g = document.createElement('div'); g.className = 'magrp';
     g.style.setProperty('--cols', n <= 5 ? n : 5);
@@ -2472,12 +2575,17 @@ const COUNT_THINGS = [['🍎','사과'],['🍌','바나나'],['🍓','딸기'],[
   };
   function next() {
     lock = false; thing = pick(COUNT_THINGS);
-    op = lv === 3 ? '-' : lv === 4 ? pick(['+', '-']) : '+';
-    const max = lv === 1 ? 5 : 10;
+    op = lv === 2 || lv === 4 ? '-' : lv === 5 ? pick(['+', '-']) : '+';
+    hands = false;  // 더하기 빼기는 그림으로만
+    const max = lv <= 2 ? 5 : 10;
     if (op === '+') { a = 1 + Math.floor(Math.random() * (max - 1)); b = 1 + Math.floor(Math.random() * (max - a)); ans = a + b; }
-    else { a = 2 + Math.floor(Math.random() * 9); b = 1 + Math.floor(Math.random() * (a - 1)); ans = a - b; }
+    else { a = 2 + Math.floor(Math.random() * (max - 1)); b = 1 + Math.floor(Math.random() * (a - 1)); ans = a - b; }
     const box = $('maBox'); box.innerHTML = '';
-    if (op === '+') { box.appendChild(grp(a)); const o = document.createElement('div'); o.className = 'maop'; o.textContent = '+'; box.appendChild(o); box.appendChild(grp(b)); }
+    const plus = () => { const o = document.createElement('div'); o.className = 'maop'; o.textContent = '+'; return o; };
+    if (hands) {
+      if (op === '+') { const h1 = handEl(a, 0, true), h2 = handEl(b); h1.classList.add('one'); h2.classList.add('one'); box.append(h1, plus(), h2); }
+      else { const h = handEl(a, b); h.classList.add('one', 'lg'); box.appendChild(h); }
+    } else if (op === '+') box.append(grp(a), plus(), grp(b));
     else box.appendChild(grp(a, b));
     $('maEq').innerHTML = `${a} ${op === '+' ? '+' : '−'} ${b} = <b>?</b>`;
     const opts = new Set([ans]);
@@ -2487,6 +2595,11 @@ const COUNT_THINGS = [['🍎','사과'],['🍌','바나나'],['🍓','딸기'],[
     ask();
   }
   function ask() {
+    if (hands) {
+      if (op === '+') { $('maMsg').textContent = '손가락이 모두 몇 개일까요?'; say(`손가락 ${COUNTER[a]}하고 ${COUNTER[b]}! 모두 몇 개일까요?`); }
+      else { $('maMsg').textContent = `✖ 손가락 ${b}개를 접으면 몇 개 남을까요?`; say(`손가락 ${COUNTER[a]}에서 ${COUNTER[b]}를 접으면 몇 개 남을까요?`); }
+      return;
+    }
     const nm = thing[1];
     if (op === '+') { $('maMsg').textContent = '모두 몇 개일까요?'; say(`${nm} ${COUNTER[a]}에 ${COUNTER[b]}를 더하면 모두 몇 개일까요?`); }
     else { $('maMsg').textContent = `${b}개가 없어졌어요. 몇 개 남았을까요?`; say(`${nm} ${COUNTER[a]}에서 ${COUNTER[b]}가 없어졌어요. 몇 개 남았을까요?`); }
@@ -2497,15 +2610,17 @@ const COUNT_THINGS = [['🍎','사과'],['🍌','바나나'],['🍓','딸기'],[
     if (n === ans) {
       lock = true; x.classList.add('yes'); SND.yay(); burst(x, 10);
       $('maEq').innerHTML = `${a} ${op === '+' ? '+' : '−'} ${b} = <b>${ans}</b>`;
+      if (hands && op === '-') { const h = $('maBox').querySelector('svg.hand'); const nh = handEl(ans); nh.classList.add('one', 'lg'); h.replaceWith(nh); lightFingers($('maBox'), ans, 300); }
+      else if (hands) lightFingers($('maBox'), ans, 300);
       say(`${sayN(a)} ${op === '+' ? '더하기' : '빼기'} ${sayN(b)}는 ${sayN(ans)}! ${ans ? COUNTER[ans] : '하나도 없어요'}!`);
       $('maMsg').textContent = `${pick(PRAISE)} ${ans ? COUNTER[ans] : '0개'}!`;
       q++; setProg('math', q, QN);
-      if (q >= QN) setTimeout(() => finish('셈 박사!', `우와! ${QN}문제 다 맞혔어요!`, start), 1600);
-      else setTimeout(next, 2600);
+      if (q >= QN) gT(() => finish('셈 박사!', `우와! ${QN}문제 다 맞혔어요!`, start), 1600);
+      else gT(next, 2600);
     } else { x.classList.remove('no'); void x.offsetWidth; x.classList.add('no'); SND.boop(); say('다시 세어 봐요!'); }
   }
-  function start() { q = 0; setProg('math', 0, QN); next(); }
-  $('maLevels').addEventListener('click', e => { const x = e.target.closest('button'); if (!x) return; lv = +x.dataset.n; store.set('kk.ma.lv', lv); segSelect($('maLevels'), 'n', lv); start(); });
+  function start() { gClear(); q = 0; setProg('math', 0, QN); next(); }
+  $('maLevels').addEventListener('click', e => { const x = e.target.closest('button'); if (!x) return; lv = +x.dataset.n; store.set('kk.ma.lv2', lv); segSelect($('maLevels'), 'n', lv); start(); });
   $('maBox').addEventListener('click', ask);
   GAMES.math = { enter() { segSelect($('maLevels'), 'n', lv); start(); } };
 })();
@@ -2602,6 +2717,7 @@ const COUNT_THINGS = [['🍎','사과'],['🍌','바나나'],['🍓','딸기'],[
     say(lv === 1 ? `${name}! 점선을 따라 그려요` : `${name}! 보고 똑같이 그려 봐요`);
   }
   function start() {
+    gClear();
     order = lv === 1 ? SHAPES.slice(0, Math.max(5, SHAPES.length)) : shuffle(MODELS.slice());
     if (lv === 1) order = SHAPES.slice(); // 쉬운 것부터 차례로
     k = 0; done = 0; setProg('trace', 0, SETS[lv]); load();
@@ -2610,8 +2726,8 @@ const COUNT_THINGS = [['🍎','사과'],['🍌','바나나'],['🍓','딸기'],[
     solved = true; render(); SND.yay(); burst($('trSvg'), 12);
     done++; setProg('trace', done, SETS[lv]);
     const name = order[k][0];
-    if (done >= SETS[lv]) setTimeout(() => finish(lv === 1 ? '따라 그리기 완성!' : '그림 박사!', `우와! ${name}까지 다 그렸어요!`, lv === 1 ? () => { lv = 2; store.set('kk.tr.lv', 2); segSelect($('trLevels'), 'n', 2); start(); } : start, lv === 1 ? '2단계로! ▶' : '한 번 더! 🔄'), 700);
-    else setTimeout(() => cheer('✏️', `${name} 잘 그렸어요!`, `우와! ${name} 잘 그렸어요!`, () => { k = (k + 1) % order.length; load(); }), 500);
+    if (done >= SETS[lv]) gT(() => finish(lv === 1 ? '따라 그리기 완성!' : '그림 박사!', `우와! ${name}까지 다 그렸어요!`, lv === 1 ? () => { lv = 2; store.set('kk.tr.lv', 2); segSelect($('trLevels'), 'n', 2); start(); } : start, lv === 1 ? '2단계로! ▶' : '한 번 더! 🔄'), 700);
+    else gT(() => cheer('✏️', `${name} 잘 그렸어요!`, `우와! ${name} 잘 그렸어요!`, () => { k = (k + 1) % order.length; load(); }), 500);
   }
   // 그리기
   const svg = $('trSvg');
@@ -2668,7 +2784,7 @@ let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTime
 
 renderStickers();
 
-const APP_VERSION = 20;  // sw.js의 kokkok-v 숫자와 같게
+const APP_VERSION = 22;  // sw.js의 kokkok-v 숫자와 같게
 $('verNote').textContent = '버전 ' + APP_VERSION;
 if ('serviceWorker' in navigator && /^https?:/.test(location.protocol)) {
   // 새 버전을 올리면: 새 오프라인 저장이 자리 잡는 순간 화면을 한 번 새로고침
