@@ -32,7 +32,7 @@
     padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   }
   .bar { width: 100%; max-width: 700px; display: flex; align-items: center; justify-content: space-between; padding: 10px 12px 4px; gap: 8px; flex: none; }
-  .bar .ttl { font-size: 22px; flex: 1; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar .ttl { font-size: clamp(15px, 4.6vw, 22px); flex: 1; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .gsnd { position: fixed; top: calc(env(safe-area-inset-top) + 10px); right: calc(env(safe-area-inset-right) + 10px); z-index: 120; width: 46px; height: 46px; border-radius: 50%; border: none; background: #fff; box-shadow: 0 3px 0 rgba(0,0,0,.1); font-size: 22px; padding: 0; }
   .gsnd.off { background: #ffd6de; }
   .view:not(#home) .bar { padding-right: 64px; }
@@ -371,7 +371,7 @@
   </div>
   <button class="shelf" id="stkShelf"><span class="lab">🎁 내 스티커 <b id="stkCount">0</b></span><span class="stks" id="stkRow"></span></button>
   <div class="homefoot"><span id="offlineNote">홈 화면에 추가하면 앱처럼 열려요</span></div>
-  <div class="credit">만든 사람 · 미야기맘 💛</div>
+  <div class="credit">만든 사람 · 미야기맘 💛 · <span id="verNote"></span></div>
 </section>
 
 <!-- ================= 카테고리 ================= -->
@@ -967,7 +967,37 @@ const PAGES = [
       <ellipse ${S} cx="145" cy="190" rx="90" ry="55"/>
       <path ${S} d="M205 175 Q215 110 225 80 Q230 55 255 55 Q290 58 285 85 Q280 100 255 98 Q245 125 240 185Z"/>
       <circle cx="262" cy="72" r="5" fill="#3b2a1e"/>
-      <ellipse ${S} cx="150" cy="200" rx="40" ry="22"/>`]
+      <ellipse ${S} cx="150" cy="200" rx="40" ry="22"/>`],
+    ['👦', '남자아이', `
+      <rect ${S} x="0" y="268" width="300" height="32"/>
+      <ellipse ${S} cx="126" cy="266" rx="22" ry="10"/><ellipse ${S} cx="174" cy="266" rx="22" ry="10"/>
+      <path ${S} d="M108 190 H192 L186 260 H158 L150 214 L142 260 H114Z"/>
+      <polygon ${S} points="106,134 72,178 90,190 114,160"/><polygon ${S} points="194,134 228,178 210,190 186,160"/>
+      <path ${S} d="M104 132 Q150 118 196 132 L200 196 H100Z"/>
+      <circle ${S} cx="80" cy="190" r="12"/><circle ${S} cx="220" cy="190" r="12"/>
+      <rect ${S} x="139" y="112" width="22" height="22"/>
+      <circle ${S} cx="107" cy="80" r="10"/><circle ${S} cx="193" cy="80" r="10"/>
+      <circle ${S} cx="150" cy="78" r="44"/>
+      <path ${S} d="M106 76 Q108 30 150 30 Q192 30 194 76 Q182 54 160 58 Q150 46 138 58 Q118 54 106 76Z"/>
+      <circle cx="134" cy="82" r="5" fill="#3b2a1e"/><circle cx="166" cy="82" r="5" fill="#3b2a1e"/>
+      <circle ${S} cx="122" cy="98" r="8"/><circle ${S} cx="178" cy="98" r="8"/>
+      <path ${L} d="M137 101 Q150 113 163 101"/>`],
+    ['👧', '여자아이', `
+      <rect ${S} x="0" y="268" width="300" height="32"/>
+      <ellipse ${S} cx="134" cy="266" rx="18" ry="9"/><ellipse ${S} cx="166" cy="266" rx="18" ry="9"/>
+      <rect ${S} x="128" y="220" width="12" height="44"/><rect ${S} x="160" y="220" width="12" height="44"/>
+      <path ${S} d="M102 80 Q96 156 120 158 H180 Q204 156 198 80Z"/>
+      <polygon ${S} points="108,146 84,192 98,200 120,160"/><polygon ${S} points="192,146 216,192 202,200 180,160"/>
+      <circle ${S} cx="90" cy="198" r="11"/><circle ${S} cx="210" cy="198" r="11"/>
+      <path ${S} d="M150 122 L116 136 L92 232 H208 L184 136Z"/>
+      <circle ${S} cx="116" cy="142" r="15"/><circle ${S} cx="184" cy="142" r="15"/>
+      <rect ${S} x="140" y="110" width="20" height="18"/>
+      <circle ${S} cx="150" cy="78" r="42"/>
+      <path ${S} d="M108 78 Q110 34 150 34 Q190 34 192 78 Q172 52 150 62 Q128 52 108 78Z"/>
+      <polygon ${S} points="186,44 206,30 206,58"/><polygon ${S} points="186,44 166,30 166,58"/><circle ${S} cx="186" cy="44" r="6"/>
+      <circle cx="135" cy="84" r="5" fill="#3b2a1e"/><circle cx="165" cy="84" r="5" fill="#3b2a1e"/>
+      <circle ${S} cx="123" cy="100" r="8"/><circle ${S} cx="177" cy="100" r="8"/>
+      <path ${L} d="M139 104 Q150 114 161 104"/>`]
   ];
 
 /* ---------- 진행 별 · 완성 · 스티커 ---------- */
@@ -2520,7 +2550,9 @@ const COUNT_THINGS = [['🍎','사과'],['🍌','바나나'],['🍓','딸기'],[
     ['하트 풍선', [heart(), poly([50,80],[46,90],[54,96],[50,99])]],
     ['별', [star()]],
     ['사과', [circlePts(50, 58, 30, 28, 30), poly([50,30],[52,14]), poly([52,22],[66,16],[60,28],[52,22])]],
-    ['로켓', [poly([50,8],[66,30],[66,74],[34,74],[34,30],[50,8]), ring(50, 42, 7, 14), poly([34,60],[22,80],[34,74]), poly([66,60],[78,80],[66,74]), poly([42,74],[50,92],[58,74])]]
+    ['로켓', [poly([50,8],[66,30],[66,74],[34,74],[34,30],[50,8]), ring(50, 42, 7, 14), poly([34,60],[22,80],[34,74]), poly([66,60],[78,80],[66,74]), poly([42,74],[50,92],[58,74])]],
+    ['남자아이', [ring(50, 22, 12), poly([40,16],[44,8],[48,14],[52,7],[56,14],[60,9]), poly([38,36],[62,36],[64,62],[36,62],[38,36]), poly([38,38],[26,56]), poly([62,38],[74,56]), poly([44,62],[42,90]), poly([56,62],[58,90])]],
+    ['여자아이', [ring(50, 22, 12), poly([39,18],[34,42]), poly([61,18],[66,42]), poly([50,34],[30,72],[70,72],[50,34]), poly([44,42],[30,56]), poly([56,42],[70,56]), poly([44,72],[44,92]), poly([56,72],[56,92]), ring(62, 10, 3, 10)]]
   ];
   const INK = ['#ff5b6e','#ff9f43','#3fbf3f','#2f9be0','#7a5cff','#3b2a1e'];
   const SETS = { 1: 5, 2: 3 };
@@ -2636,8 +2668,22 @@ let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTime
 
 renderStickers();
 
+const APP_VERSION = 20;  // sw.js의 kokkok-v 숫자와 같게
+$('verNote').textContent = '버전 ' + APP_VERSION;
 if ('serviceWorker' in navigator && /^https?:/.test(location.protocol)) {
-  navigator.serviceWorker.register('sw.js').then(() => navigator.serviceWorker.ready).then(() => {
+  // 새 버전을 올리면: 새 오프라인 저장이 자리 잡는 순간 화면을 한 번 새로고침
+  const hadController = !!navigator.serviceWorker.controller;
+  let reloaded = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController || reloaded) return; reloaded = true;
+    // 놀이 중이면 방해하지 않게, 처음 화면일 때만 바로 새로고침
+    if (current === 'home') location.reload(); else $('offlineNote').textContent = '🆕 새 버전이 준비됐어요 · 처음 화면에서 다시 열면 바뀌어요';
+  });
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(reg => {
+    reg.update().catch(() => {});
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) reg.update().catch(() => {}); });
+    return navigator.serviceWorker.ready;
+  }).then(() => {
     $('offlineNote').textContent = '✈️ 비행기 모드에서도 할 수 있어요 · 홈 화면에 추가해 주세요';
   }).catch(() => {});
 }
