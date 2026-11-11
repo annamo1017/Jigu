@@ -4,9 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>콕콕 놀이터</title>
-<link rel="manifest" href="manifest.json">
-<link rel="icon" href="icon-192.png">
-<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="manifest" href="kokkok-manifest.json">
+<link rel="icon" href="kokkok-icon-192.png">
+<link rel="apple-touch-icon" href="kokkok-icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="콕콕 놀이터">
@@ -70,6 +70,7 @@
   .tile { position: relative; }
   .tile .num { position: absolute; top: 8px; left: 10px; width: 26px; height: 26px; border-radius: 50%; background: rgba(255,255,255,.9); color: #5a3e2b; font-size: 15px; display: flex; align-items: center; justify-content: center; text-shadow: none; }
   .tile .lv { font-size: 13px; background: rgba(255,255,255,.28); border-radius: 999px; padding: 1px 10px; margin-top: 2px; }
+  .upd { border: none; background: none; color: #c58aa0; font-size: 13px; text-decoration: underline; padding: 0; }
   .credit { font-size: 13px; color: #c58aa0; padding: 0 0 10px; flex: none; letter-spacing: .5px; }
   .homefoot { display: flex; gap: 10px; align-items: center; padding: 0 16px 4px; font-size: 13px; color: #a07a5a; flex: none; text-align: center; }
 
@@ -380,7 +381,7 @@
   </div>
   <button class="shelf" id="stkShelf"><span class="lab">🎁 내 스티커 <b id="stkCount">0</b></span><span class="stks" id="stkRow"></span></button>
   <div class="homefoot"><span id="offlineNote">홈 화면에 추가하면 앱처럼 열려요</span></div>
-  <div class="credit">만든 사람 · 미야기맘 💛 · <span id="verNote"></span></div>
+  <div class="credit">만든 사람 · 미야기맘 💛 · <span id="verNote"></span> · <button class="upd" id="updBtn">🔄 새 버전 확인</button></div>
 </section>
 
 <!-- ================= 카테고리 ================= -->
@@ -2784,8 +2785,21 @@ let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTime
 
 renderStickers();
 
-const APP_VERSION = 22;  // sw.js의 kokkok-v 숫자와 같게
+const APP_VERSION = 24;  // sw.js의 kokkok-v 숫자와 같게
 $('verNote').textContent = '버전 ' + APP_VERSION;
+// 어른용: 새 버전 받기 (아래로 당겨 새로고침은 아이가 놀다 실수로 하지 않게 막혀 있어요)
+$('updBtn').addEventListener('click', async () => {
+  $('updBtn').textContent = '확인 중…';
+  try {
+    const reg = 'serviceWorker' in navigator && await navigator.serviceWorker.getRegistration('./same-picture.html');
+    if (reg) await reg.update();
+    const res = await fetch('same-picture.html', { cache: 'no-store' });
+    const m = (await res.text()).match(/const APP_VERSION = (\d+)/);
+    const latest = m ? +m[1] : APP_VERSION;
+    if (latest > APP_VERSION) { $('updBtn').textContent = `버전 ${latest}로 바꾸는 중…`; setTimeout(() => location.reload(), 600); }
+    else $('updBtn').textContent = '✅ 최신 버전이에요';
+  } catch (e) { $('updBtn').textContent = '인터넷이 될 때 눌러 주세요'; }
+});
 if ('serviceWorker' in navigator && /^https?:/.test(location.protocol)) {
   // 새 버전을 올리면: 새 오프라인 저장이 자리 잡는 순간 화면을 한 번 새로고침
   const hadController = !!navigator.serviceWorker.controller;
@@ -2795,7 +2809,17 @@ if ('serviceWorker' in navigator && /^https?:/.test(location.protocol)) {
     // 놀이 중이면 방해하지 않게, 처음 화면일 때만 바로 새로고침
     if (current === 'home') location.reload(); else $('offlineNote').textContent = '🆕 새 버전이 준비됐어요 · 처음 화면에서 다시 열면 바뀌어요';
   });
-  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(reg => {
+  // 예전에 저장소 전체에 걸려 있던 콕콕 오프라인 저장(sw.js)은 풀어 주기 — 다른 앱 것은 건드리지 않아요
+  navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(async r => {
+    const w = r.active || r.waiting || r.installing;
+    if (!w || !/\/sw\.js$/.test(w.scriptURL)) return;
+    try {
+      const res = await fetch(w.scriptURL, { cache: 'no-store' });
+      const txt = res.ok ? await res.text() : '';
+      if (!res.ok || txt.includes('콕콕 놀이터')) r.unregister();
+    } catch (e) {}
+  })).catch(() => {});
+  navigator.serviceWorker.register('kokkok-sw.js', { scope: './same-picture.html', updateViaCache: 'none' }).then(reg => {
     reg.update().catch(() => {});
     document.addEventListener('visibilitychange', () => { if (!document.hidden) reg.update().catch(() => {}); });
     return navigator.serviceWorker.ready;
