@@ -2,7 +2,22 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" id="vp" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<script>
+// 태블릿처럼 큰 화면에서는 버튼·글자가 작아 보이지 않게 화면 전체를 확대해요 (폰은 그대로)
+(function () {
+  function fit() {
+    var land = window.matchMedia('(orientation: landscape)').matches;
+    var a = Math.min(screen.width, screen.height), b = Math.max(screen.width, screen.height);
+    var w = land ? b : a, h = land ? a : b;
+    var k = land ? Math.min(w / 900, h / 600) : Math.min(w / 420, h / 760);
+    var c = k > 1.12 ? 'width=' + Math.round(w / Math.min(k, 2.2)) + ', user-scalable=no, viewport-fit=cover' : 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover';
+    var m = document.getElementById('vp'); if (m && m.content !== c) m.content = c;
+  }
+  fit();
+  window.addEventListener('orientationchange', function () { setTimeout(fit, 200); });
+})();
+</script>
 <title>콕콕 놀이터</title>
 <link rel="manifest" href="kokkok-manifest.json">
 <link rel="icon" href="kokkok-icon-192.png">
@@ -25,6 +40,7 @@
   }
   button { font-family: inherit; font-weight: inherit; cursor: pointer; color: inherit; }
   .hidden { display: none !important; }
+
 
   /* ---------- 공통 화면 틀 ---------- */
   .view {
@@ -345,7 +361,9 @@
     background-image: linear-gradient(#f3e0d0 1px, transparent 1px), linear-gradient(90deg, #f3e0d0 1px, transparent 1px); background-size: 50% 50%; background-position: center; border: 4px solid #fff; }
   .nmtools .tool { font-size: 15px; white-space: nowrap; padding: 0 10px; }
   .nmcell { position: relative; }
-  .nmx { position: absolute; top: 6px; right: 6px; width: 34px; height: 34px; border-radius: 50%; border: none; background: #ffe0e6; color: #e0445e; font-size: 20px; box-shadow: 0 2px 0 rgba(0,0,0,.1); padding: 0; z-index: 2; }
+  #nmMsg { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 96%; height: 32px; flex: none; }
+  .nmcell { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .nmx { height: 30px; border-radius: 999px; border: none; background: #ffe0e6; color: #e0445e; font-size: 14px; box-shadow: 0 2px 0 rgba(0,0,0,.1); padding: 0 12px; }
   .nmbox.ok { border-color: #7ccf6a; background-color: #f0fbe9; }
 
   /* ---------- 5. 색칠하기 ---------- */
@@ -400,6 +418,32 @@
   .hchoice { width: 104px; height: 104px; border: none; border-radius: 26px; background: #fff; font-size: 62px; box-shadow: 0 6px 0 rgba(0,0,0,.1); color: var(--hc); }
   .hchoice.no { animation: shake .4s; opacity: .45; }
   .hchoice.yes { background: #e6f9df; box-shadow: 0 0 0 5px #7ccf6a; }
+  /* ---------- 화면 크기별 맞춤 (맨 뒤에 둬야 앞 규칙을 덮어요) ---------- */
+  .sizes { flex-wrap: wrap; }
+  @media (max-width: 400px) { .szb { width: 40px; height: 40px; } .dot { width: 42px; height: 42px; } }
+  @media (max-height: 520px) {
+    .bar { padding-top: 4px; padding-bottom: 2px; }
+    .nb { width: 44px; height: 42px; font-size: 10px; } .nb b { font-size: 18px; }
+    .gsnd { width: 40px; height: 40px; font-size: 19px; top: calc(env(safe-area-inset-top) + 4px); }
+    .prog { font-size: 15px; margin: 0; }
+    .seg button { padding: 3px 10px; font-size: 14px; }
+    .msg { font-size: 16px; min-height: 22px; margin: 0 8px; }
+    .wnav { margin: 2px 0; } .wname { font-size: 20px; padding: 3px 12px; }
+    .spk { width: 40px; height: 40px; font-size: 20px; }
+    .hchoice { width: 72px; height: 72px; font-size: 42px; border-radius: 20px; }
+    .lspad { grid-template-columns: repeat(6, 1fr); max-width: 480px; gap: 6px; padding: 4px 12px 8px; }
+    .lspad button { height: 46px; font-size: 26px; border-radius: 14px; }
+    .lsslots { margin: 6px 0 2px; } .lsslots span { width: 56px; height: 66px; font-size: 44px; }
+    .lsread { padding: 4px 14px; margin-top: 4px; } .lsread #lsText { font-size: 28px; }
+    .dot { width: 34px; height: 34px; border-width: 3px; } .palette { gap: 5px; padding: 4px 8px 6px; }
+    .szb { width: 34px; height: 34px; } .sizes { gap: 4px; padding-top: 2px; }
+    .tool { height: 38px; min-width: 38px; font-size: 18px; }
+    .tiles { gap: 10px; padding: 4px 12px 10px; } .tile { padding: 8px 6px 8px; } .tile .e { font-size: 40px; }
+    .petcard { padding: 4px 12px; margin: 4px 16px; } .petcard .pe { font-size: 40px; }
+    #home h1 { font-size: 30px; margin-top: 6px; }
+    .overlay { gap: 8px; } .overlay .demo { font-size: 34px; } .overlay h1 { font-size: 28px; }
+  }
+  @media (orientation: landscape) { .lspad { grid-template-columns: repeat(6, 1fr); max-width: 560px; } .lspad button { height: 54px; } }
 </style>
 </head>
 <body>
@@ -2381,9 +2425,9 @@ const COUNT_WORD = ['하나!','둘!','셋!','넷!','다섯!','여섯!','일곱!'
     $('nmInput').value = name; $('nmNote').textContent = '한글로 1~5글자';
   }
   function layout() {
-    const z = $('nmBoxes'), Wd = z.clientWidth - 24, H = z.clientHeight - 16, n = boxes.length, gap = 10;
+    const z = $('nmBoxes'), Wd = z.clientWidth - 24, H = z.clientHeight - 16, n = boxes.length, gap = 10, btn = 34;
     let best = 0, bc = 1;
-    for (let c = 1; c <= n; c++) { const r = Math.ceil(n / c), sz = Math.min((Wd - gap * (c - 1)) / c, (H - gap * (r - 1)) / r); if (sz > best) { best = sz; bc = c; } }
+    for (let c = 1; c <= n; c++) { const r = Math.ceil(n / c), sz = Math.min((Wd - gap * (c - 1)) / c, (H - gap * (r - 1) - btn * r) / r); if (sz > best) { best = sz; bc = c; } }
     z.style.gridTemplateColumns = `repeat(${bc}, auto)`;
     $('myname').style.setProperty('--nb', Math.max(90, Math.min(best, 340)) + 'px');
   }
@@ -2408,7 +2452,7 @@ const COUNT_WORD = ['하나!','둘!','셋!','넷!','다섯!','여섯!','일곱!'
     const ink = mk('g', {}); svg.appendChild(ink); b.ink = ink;
     // 칸마다 지우기 단추
     const cell = document.createElement('div'); cell.className = 'nmcell'; cell.appendChild(svg);
-    const x = document.createElement('button'); x.className = 'nmx'; x.textContent = '↺'; x.setAttribute('aria-label', '이 칸 지우기');
+    const x = document.createElement('button'); x.className = 'nmx'; x.textContent = '↺ 이 칸 지우기'; x.setAttribute('aria-label', '이 칸 지우기');
     x.addEventListener('click', () => { clearBox(b); SND.pop(); $('nmMsg').textContent = `${ch} 칸을 지웠어요. 다시 써 봐요!`; progressSilent(); });
     cell.appendChild(x); b.cell = cell;
     const pt = e => { const r = svg.getBoundingClientRect(); return [(e.clientX - r.left) / r.width * 100, (e.clientY - r.top) / r.height * 100]; };
@@ -2437,7 +2481,7 @@ const COUNT_WORD = ['하나!','둘!','셋!','넷!','다섯!','여섯!','일곱!'
     const each = b.guideLines.map(L => { const g = sample([L]); return g.length ? g.filter(p => near(p, U, 5.5)).length / g.length : 1; });
     const worst = Math.min(...each), wi = each.indexOf(worst);
     if (cov >= .9 && worst >= .8 && stray <= 22) { b.ok = true; b.svg.classList.add('ok'); SND.ding(); burst(b.svg, 8); say(`${b.ch}! 잘 썼어요!`); progress(); }
-    else if (stray > 22) $('nmMsg').textContent = '점선 위를 따라 써요. 🔄로 지우고 다시 해도 돼요';
+    else if (stray > 22) $('nmMsg').textContent = '점선 위를 따라 써요! (↺ 이 칸 지우기)';
     else if (cov > .4) $('nmMsg').textContent = worst < .8 ? `${b.ch}의 ${wi + 1}번 줄을 끝까지 써요!` : `${b.ch} 조금만 더!`;
   }
   function clearBox(b) { b.strokes = []; b.ok = false; b.ink.innerHTML = ''; b.svg.classList.remove('ok'); }
@@ -2455,7 +2499,7 @@ const COUNT_WORD = ['하나!','둘!','셋!','넷!','다섯!','여섯!','일곱!'
     const z = $('nmBoxes'); z.innerHTML = ''; boxes = [...name].map(makeBox); boxes.forEach(b => z.appendChild(b.cell));
     applyGuide(); setProg('myname', 0, boxes.length);
     $('nmMsg').textContent = guide ? '점선을 따라 한 글자씩 써요!' : '점선 없이 혼자 써 봐요! 다 쓰면 ✅';
-    requestAnimationFrame(layout);
+    requestAnimationFrame(() => { lastW = innerWidth; lastH = innerHeight; layout(); });
     say(`${name}! ${guide ? '점선을 따라 써 봐요' : '혼자 써 봐요'}`);
   }
   function applyGuide() {
@@ -2489,7 +2533,9 @@ const COUNT_WORD = ['하나!','둘!','셋!','넷!','다섯!','여섯!','일곱!'
     });
     saveCanvas(out, '내이름_' + name);
   });
-  if ('ResizeObserver' in window) new ResizeObserver(() => { if (boxes.length && current === 'myname') layout(); }).observe($('nmBoxes'));
+  // 칸 배치는 이름을 만들 때와 화면 크기가 바뀔 때만 (안내 글이 바뀌어도 그대로)
+  let lastW = 0, lastH = 0;
+  if ('ResizeObserver' in window) new ResizeObserver(() => { if (!boxes.length || current !== 'myname') return; const w = innerWidth, h = innerHeight; if (w !== lastW || h !== lastH) { lastW = w; lastH = h; layout(); } }).observe($('nmBoxes'));
   GAMES.myname = { enter() { guide = true; build(); }, resize() { if (boxes.length) layout(); } };
 })();
 
@@ -3310,7 +3356,7 @@ let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTime
 
 renderStickers(); renderPet();
 
-const APP_VERSION = 39;  // sw.js의 kokkok-v 숫자와 같게
+const APP_VERSION = 41;  // sw.js의 kokkok-v 숫자와 같게
 $('verNote').textContent = '버전 ' + APP_VERSION;
 // 어른용: 새 버전 받기 (아래로 당겨 새로고침은 아이가 놀다 실수로 하지 않게 막혀 있어요)
 $('updBtn').addEventListener('click', async () => {

@@ -1,6 +1,6 @@
 // 콕콕 놀이터 - 오프라인 저장 (같은 저장소의 다른 앱은 건드리지 않아요)
 // 게임을 고친 뒤 다시 올릴 때는 아래 버전 숫자를 하나 올려 주세요.
-const CACHE = 'kokkok-app-v39';
+const CACHE = 'kokkok-app-v41';
 const FILES = ['./same-picture.html', './kokkok-manifest.json', './kokkok-icon-192.png', './kokkok-icon-512.png'];
 const MINE = FILES.map(f => new URL(f, self.location).pathname);
 
