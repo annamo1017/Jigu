@@ -1,6 +1,6 @@
 // 콕콕 놀이터 - 오프라인 저장
 // 게임을 고친 뒤 다시 올릴 때는 아래 버전 숫자를 하나 올려 주세요.
-const CACHE = 'kokkok-v17';
+const CACHE = 'kokkok-v18';
 const FILES = ['./same-picture.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {

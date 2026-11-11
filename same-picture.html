@@ -33,6 +33,9 @@
   }
   .bar { width: 100%; max-width: 700px; display: flex; align-items: center; justify-content: space-between; padding: 10px 12px 4px; gap: 8px; flex: none; }
   .bar .ttl { font-size: 22px; flex: 1; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .gsnd { position: fixed; top: calc(env(safe-area-inset-top) + 10px); right: calc(env(safe-area-inset-right) + 10px); z-index: 120; width: 46px; height: 46px; border-radius: 50%; border: none; background: #fff; box-shadow: 0 3px 0 rgba(0,0,0,.1); font-size: 22px; padding: 0; }
+  .gsnd.off { background: #ffd6de; }
+  .view:not(#home) .bar { padding-right: 64px; }
   .navbtns { display: flex; gap: 6px; flex: none; }
   .nb { border: none; background: #fff; border-radius: 16px; width: 49px; height: 50px; box-shadow: 0 3px 0 rgba(0,0,0,.08); display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; color: #8a6a55; padding: 0; line-height: 1.1; }
   .nb b { font-size: 21px; font-weight: normal; }
@@ -322,6 +325,9 @@
   .szb { width: 44px; height: 44px; border-radius: 14px; border: none; background: #fff; box-shadow: 0 3px 0 rgba(0,0,0,.08); display: flex; align-items: center; justify-content: center; padding: 0; }
   .szb i { display: block; border-radius: 50%; background: #5a3e2b; }
   .szb.on { background: #ffd84d; box-shadow: 0 0 0 3px #5a3e2b; }
+  .savebox img { max-width: 88vw; max-height: 56vh; border-radius: 18px; background: #fff; box-shadow: 0 6px 0 rgba(0,0,0,.1); -webkit-touch-callout: default; user-select: auto; -webkit-user-select: auto; }
+  .savebox .how { font-size: 16px; line-height: 1.6; color: #5a3e2b; background: #fff; border-radius: 16px; padding: 8px 16px; }
+  .savebox .how b { color: #e8698a; }
   .szb.save { font-size: 22px; background: #e6f4ff; margin-left: 8px; }
   .ask { position: absolute; inset: 0; background: rgba(255,246,217,.92); z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; font-size: 26px; border-radius: 22px; }
 
@@ -349,6 +355,8 @@
 </style>
 </head>
 <body>
+
+<button class="gsnd" id="gSnd" aria-label="소리 켜기/끄기">🔊</button>
 
 <!-- ================= 홈 ================= -->
 <section class="view" id="home">
@@ -505,7 +513,7 @@
 <!-- ================= 4. 풍선 ================= -->
 <section class="view hidden" id="balloon">
   <div class="sky" id="sky"><div class="cloud" style="top:34%;left:6%">☁️</div><div class="cloud" style="top:52%;right:8%">☁️</div><div class="cloud" style="top:72%;left:30%;font-size:44px">☁️</div></div>
-  <div class="bar"><div class="navbtns"><button class="nb" id="blBack"><b>⬅️</b>뒤로</button><button class="nb" data-tohome><b>🏠</b>처음</button></div><div class="lives" id="blLives"></div><div class="pill" id="blPts">0개</div></div>
+  <div class="bar"><div class="navbtns"><button class="nb" id="blBack"><b>⬅️</b>뒤로</button><button class="nb" data-tohome><b>🏠</b>처음</button></div><div class="lives" id="blLives"></div><div class="pill" id="blPts" style="min-width:0;padding:6px 10px;font-size:17px">0개</div></div>
   <div class="blq" id="blQ"><span class="pic" id="blPic"></span><span class="word" id="blWord"></span><button class="spk" aria-label="다시 듣기">🔊</button></div>
   <div class="blinfo"><span id="blEsc"></span><span id="blFx"></span></div>
   <div class="msg" id="blMsg" style="position:relative;z-index:5"></div>
@@ -581,13 +589,12 @@
       <button class="tool" id="dErase">🧽</button>
       <button class="tool" id="dDone">✅</button>
     </div>
-    <button class="round" id="dClear">🗑️</button>
   </div>
   <div class="canvaswrap" id="dWrap">
     <canvas id="dCanvas"></canvas>
     <div class="ask hidden" id="dAsk">다 지울까요?<div class="row"><button class="big" id="dYes" style="background:#e8698a;box-shadow:0 6px 0 #b84d6a">지우기</button><button class="sub" id="dNo">아니요</button></div></div>
   </div>
-  <div class="sizes"><span id="dSizes" class="sizes" style="padding:0"></span><button class="szb save" id="dSave" aria-label="저장">💾</button></div>
+  <div class="sizes"><span id="dSizes" class="sizes" style="padding:0"></span><button class="szb save" id="dSave" aria-label="저장">💾</button><button class="szb save" id="dClear" aria-label="다 지우기" style="margin-left:4px;background:#ffe0e6">🗑️</button></div>
   <div class="palette" id="dPal"></div>
 </section>
 
@@ -702,10 +709,12 @@ document.addEventListener('pointerdown', () => {
 function setSound(on) {
   soundOn = on; store.set('kk.sound', on);
   $('soundIcon').textContent = on ? '🔊' : '🔇';
+  $('gSnd').textContent = on ? '🔊' : '🔇'; $('gSnd').classList.toggle('off', !on);
   $('soundLabel').textContent = on ? '소리 켜짐' : '소리 꺼짐';
   if (!on && synth) try { synth.cancel(); } catch (e) {}
 }
 $('soundTile').addEventListener('click', () => { setSound(!soundOn); if (soundOn) { SND.ding(); say('소리가 켜졌어요! 가, 나, 다!'); } });
+$('gSnd').addEventListener('click', () => { setSound(!soundOn); if (soundOn) { SND.ding(); say('소리가 켜졌어요!'); } });
 setSound(soundOn);
 
 /* ---------- 축하 효과 ---------- */
@@ -768,19 +777,17 @@ function saveCanvas(canvas, name) {
   const stamp = new Date(), fn = `콕콕_${name}_${stamp.getMonth() + 1}${String(stamp.getDate()).padStart(2, '0')}_${String(stamp.getHours()).padStart(2, '0')}${String(stamp.getMinutes()).padStart(2, '0')}.png`;
   let file = null; try { file = new File([arr], fn, { type: 'image/png' }); } catch (e) {}
   SND.ding();
-  if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
-    navigator.share({ files: [file], title: '콕콕 놀이터 그림' }).catch(err => { if (err && err.name !== 'AbortError') showSaved(url, fn); });
-    return;
-  }
-  showSaved(url, fn);
+  showSaved(url, fn, file && navigator.canShare && navigator.canShare({ files: [file] }) ? file : null);
 }
 // 공유가 안 되면: 그림을 크게 보여주고 꾹 눌러 저장 / 내려받기
-function showSaved(url, fn) {
-  const d = document.createElement('div'); d.className = 'cheer';
-  d.innerHTML = `<img src="${url}" style="max-width:86vw;max-height:58vh;border-radius:18px;background:#fff;box-shadow:0 6px 0 rgba(0,0,0,.1)">
-    <div class="fs">그림을 꾹 누르면 '사진에 저장'할 수 있어요</div>
-    <div class="row"><a class="big" style="text-decoration:none" href="${url}" download="${fn}">💾 내려받기</a><button class="sub">닫기</button></div>`;
-  d.querySelector('button').addEventListener('click', () => d.remove());
+function showSaved(url, fn, file) {
+  const d = document.createElement('div'); d.className = 'cheer savebox';
+  d.innerHTML = `<img src="${url}" alt="${fn}">
+    <div class="how"><b>👆 그림을 꾹 누르세요</b><br>아이폰: <b>'사진 앱에 저장'</b> · 안드로이드: <b>'이미지 다운로드'</b></div>
+    <div class="row"><a class="sub" style="text-decoration:none" href="${url}" download="${fn}">⬇️ 내려받기</a>${file ? '<button class="sub" data-share>📤 공유</button>' : ''}<button class="sub" data-close>닫기</button></div>`;
+  d.querySelector('[data-close]').addEventListener('click', () => d.remove());
+  const sh = d.querySelector('[data-share]');
+  if (sh) sh.addEventListener('click', () => navigator.share({ files: [file], title: '콕콕 놀이터 그림' }).catch(() => {}));
   document.body.appendChild(d);
 }
 
@@ -1451,7 +1458,7 @@ const COUNT_WORD = ['하나!','둘!','셋!','넷!','다섯!','여섯!','일곱!'
 
   // ---------- 화면 표시 ----------
   function drawLives(lostIdx) {
-    if (kid()) { $('blLives').innerHTML = Array.from({ length: KIDQ }, (_, i) => `<span class="${i < pts ? '' : 'off'}${i === pts - 1 ? ' lost' : ''}" style="font-size:18px">⭐</span>`).join(''); return; }
+    if (kid()) { $('blLives').innerHTML = Array.from({ length: KIDQ }, (_, i) => `<span class="${i < pts ? '' : 'off'}${i === pts - 1 ? ' lost' : ''}" style="font-size:13px">⭐</span>`).join(''); return; }
     $('blLives').innerHTML = Array.from({ length: Math.max(MAXL, lives) }, (_, i) =>
       `<span class="${i < lives ? '' : 'off'}${i === lostIdx ? ' lost' : ''}">⭐</span>`).join('');
   }
