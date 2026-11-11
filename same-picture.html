@@ -802,7 +802,7 @@ function cheer(emoji, text, voice, then, big) {
   say(voice || text);
   const close = () => { if (!d.isConnected) return; d.remove(); then && then(); };
   d.addEventListener('pointerdown', close);
-  setTimeout(close, big ? 3200 : 2200);
+  setTimeout(() => waitVoice(close), big ? 3200 : 2200);
 }
 
 /* ---------- 한글 도우미 ---------- */
@@ -1276,6 +1276,13 @@ let current = 'home';
 const GT = [];
 function gT(fn, ms) { const id = setTimeout(() => { const k = GT.indexOf(id); if (k >= 0) GT.splice(k, 1); fn(); }, ms); GT.push(id); return id; }
 function gClear() { GT.splice(0).forEach(clearTimeout); }
+// 칭찬하는 말이 끝난 다음에 넘어가기 (최대 8초)
+const speaking = () => soundOn && synth && (synth.speaking || synth.pending);
+function waitVoice(fn, startedAt = performance.now()) {
+  if (!speaking() || performance.now() - startedAt > 8000) { fn(); return; }
+  gT(() => waitVoice(fn, startedAt), 200);
+}
+function gTv(fn, ms) { return gT(() => waitVoice(fn), ms); }
 let lastCat = null;
 function go(name, arg) {
   gClear();
@@ -1898,7 +1905,7 @@ const COUNT_WORD = ['하나!','둘!','셋!','넷!','다섯!','여섯!','일곱!'
       say(`${q.ans}! ${q.word}! ${pick(PRAISE)}`);
       balls.filter(x => !x.item).forEach((x, i) => setTimeout(() => { if (balls.includes(x)) { removeBall(x, 4); SND.pop(); } }, 200 + i * 90));
       if (kid() && pts >= KIDQ) { stop(); setTimeout(() => { clearBalls(); finish('한글 풍선 완성!', `우와! ${KIDQ}개 다 맞혔어요! 한글 박사!`, start); }, 1300); return; }
-      setTimeout(() => { if (playing) { makeQ(); wave(); } }, 1600);
+      setTimeout(() => { if (playing) { if (kid()) waitVoice(() => { if (playing) { makeQ(); wave(); } }); else { makeQ(); wave(); } } }, 1600);
     } else if (kid()) {
       // 아기 모드: 틀려도 별이 줄지 않고 풍선이 흔들리기만
       SND.boop(); b.el.classList.remove('nope'); void b.el.offsetWidth; b.el.classList.add('nope');
@@ -2377,7 +2384,7 @@ const COUNT_WORD = ['하나!','둘!','셋!','넷!','다섯!','여섯!','일곱!'
       score++; setProg('hangul', score, QN);
       say(`${h[0]}! ${h[1]}! ${pick(PRAISE)}`);
       if (score >= QN) setTimeout(() => finish('한글 박사!', `우와! ${QN}문제 다 맞혔어요!`, () => setMode(mode)), 900);
-      else setTimeout(next, 1700);
+      else gTv(next, 1200);
     } else {
       b.classList.remove('no'); void b.offsetWidth; b.classList.add('no'); SND.boop(); say(`${h[0]}? 아니에요`);
     }
@@ -2394,7 +2401,7 @@ const COUNT_WORD = ['하나!','둘!','셋!','넷!','다섯!','여섯!','일곱!'
 (() => {
   const PAIRS = 5, STEPS = PAIRS * 2, COLORS = ['#ff8fab','#ffb347','#6ccf8a','#7ec8ff'];
   let lv = 1, words = [], s = 0, lock = false, token = 0;
-  const later = (fn, ms) => { const tk = token; setTimeout(() => { if (tk === token) fn(); }, ms); };
+  const later = (fn, ms) => { const tk = token; setTimeout(() => waitVoice(() => { if (tk === token) fn(); }), ms); };
   const doneLv = () => store.get('kk.st.done', 0), openAll = () => store.get('kk.st.all', false);
   const W = createWriter($('stSvg'), {
     onStroke(si) { $('stMsg').textContent = `잘했어요! 이제 ${si + 1}번째 줄이에요`; say(COUNT_WORD[si - 1] || '좋아요!'); },
@@ -2540,7 +2547,7 @@ const COUNT_THINGS = [['🍎','사과'],['🍌','바나나'],['🍓','딸기'],[
         $('cnMsg').textContent = `${COUNTER[ans]}! ${pick(PRAISE)}`; SND.yay(); burst($('cnBox'), 10);
         q++; setProg('count', q, QN);
         if (q >= QN) gT(() => finish('세어 보기 완성!', `우와! ${QN}문제 다 맞혔어요!`, start), 700);
-        else gT(next, 1500);
+        else gTv(next, 1500);
       }, ans * gap + 300);
     } else {
       b.classList.remove('no'); void b.offsetWidth; b.classList.add('no'); SND.boop(); say(`${n}? 다시 세어 봐요`);
@@ -2624,7 +2631,7 @@ const COUNT_THINGS = [['🍎','사과'],['🍌','바나나'],['🍓','딸기'],[
       say(`${t[1]}${josa(t[1], '가', '이')} 더 많아요! ${COUNTER[mine]}, ${COUNTER[other]}`);
       q++; setProg('more', q, QN);
       if (q >= QN) gT(() => finish('많다 적다 박사!', `우와! ${QN}문제 다 맞혔어요!`, start), 1800);
-      else gT(next, 2400);
+      else gTv(next, 2400);
     } else {
       el.classList.remove('no'); void el.offsetWidth; el.classList.add('no'); SND.boop(); say('다시 세어 봐요!');
     }
@@ -2700,7 +2707,7 @@ const COUNT_THINGS = [['🍎','사과'],['🍌','바나나'],['🍓','딸기'],[
       say(`둘 다 ${COUNTER[n]}! 모양은 달라도 개수는 같아요!`);
       q++; setProg('blocks', q, QN);
       if (q >= QN) gT(() => finish('블록 박사!', `우와! ${QN}문제 다 맞혔어요!`, start), 2200);
-      else gT(next, 3000);
+      else gTv(next, 3000);
     } else {
       b.classList.remove('no'); void b.offsetWidth; b.classList.add('no'); SND.boop();
       say(`그건 ${COUNTER[v]}예요. 다시 세어 봐요!`);
@@ -2739,7 +2746,7 @@ const COUNT_THINGS = [['🍎','사과'],['🍌','바나나'],['🍓','딸기'],[
         $('lsMsg').textContent = `${n}! ${pick(PRAISE)}`; say(`${read()}! ${pick(PRAISE)}`);
         q++; setProg('listen', q, QN);
         if (q >= QN) gT(() => finish('숫자 듣기 박사!', `우와! ${QN}문제 다 맞혔어요!`, start), 1400);
-        else gT(next, 1800);
+        else gTv(next, 1800);
       } else {
         lock = true; SND.boop(); slots('no');
         $('lsMsg').textContent = `${typed.join('')}가 아니에요. 다시 들어 봐요!`;
@@ -2833,7 +2840,7 @@ function lightFingers(container, count, gap = 400) {
         $('fgMsg').textContent = `${n}개! ${pick(PRAISE)}`; SND.yay(); burst($('fgBox'), 10);
         q++; setProg('fingers', q, QN);
         if (q >= QN) gT(() => finish('손가락 박사!', `우와! ${QN}문제 다 맞혔어요!`, start), 700);
-        else gT(next, 1400);
+        else gTv(next, 1400);
       }, n * (n > 5 ? 300 : 420) + 300);
     } else { b.classList.remove('no'); void b.offsetWidth; b.classList.add('no'); SND.boop(); say('손가락을 하나씩 세어 봐요!'); }
   }
@@ -2896,7 +2903,7 @@ function lightFingers(container, count, gap = 400) {
       $('maMsg').textContent = `${pick(PRAISE)} ${ans ? COUNTER[ans] : '0개'}!`;
       q++; setProg('math', q, QN);
       if (q >= QN) gT(() => finish('셈 박사!', `우와! ${QN}문제 다 맞혔어요!`, start), 1600);
-      else gT(next, 2600);
+      else gTv(next, 2600);
     } else { x.classList.remove('no'); void x.offsetWidth; x.classList.add('no'); SND.boop(); say('다시 세어 봐요!'); }
   }
   function start() { gClear(); q = 0; setProg('math', 0, QN); next(); }
@@ -3094,7 +3101,7 @@ let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTime
 
 renderStickers(); renderPet();
 
-const APP_VERSION = 30;  // sw.js의 kokkok-v 숫자와 같게
+const APP_VERSION = 31;  // sw.js의 kokkok-v 숫자와 같게
 $('verNote').textContent = '버전 ' + APP_VERSION;
 // 어른용: 새 버전 받기 (아래로 당겨 새로고침은 아이가 놀다 실수로 하지 않게 막혀 있어요)
 $('updBtn').addEventListener('click', async () => {
