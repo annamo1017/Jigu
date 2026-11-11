@@ -502,6 +502,7 @@
   <div class="wnav"><div class="wname" id="trName"></div><button class="spk sm" id="trSpk" aria-label="듣기">🔊</button><button class="tool" id="trAll" style="height:42px;font-size:15px">🖼️ 전체 보기</button></div>
   <div class="trwrap" id="trWrap"><svg class="trmodel hidden" id="trModel" viewBox="0 0 100 100"></svg><svg class="wsvg trsvg" id="trSvg" viewBox="0 0 100 100"></svg></div>
   <div class="msg" id="trMsg"></div>
+  <div class="row hidden" id="trNextRow" style="padding:2px 0 6px"><button class="big" id="trNext" style="font-size:22px;padding:10px 26px">다음 그림 ▶</button><button class="sub" id="trSave2">💾 저장</button></div>
   <div class="tools" style="padding-bottom:4px"><button class="tool" id="trClear">🔄 지우기</button><button class="tool" id="trSkip">⏭️ 다른 그림</button><button class="tool" id="trDone">✅ 다 했어요</button><button class="tool" id="trSave">💾</button></div>
   <div class="sizes" id="trSizes"></div>
   <div class="palette" id="trPal"></div>
@@ -730,10 +731,7 @@ if (synth) { pickVoice(); try { synth.addEventListener('voiceschanged', pickVoic
 let lastSaid = '', introUntil = 0, introPending = false, afterIntro = [];
 function say(text, append) {
   lastSaid = text;
-  if (!append && performance.now() < introUntil) {  // 설명 중이면 끊지 않고 뒤에 이어서
-    if (introPending) { afterIntro.push(text); return; }
-    append = true;
-  }
+  if (!append && introPending) { afterIntro.push(text); return; }  // 설명 시작 직전 문제만 뒤로
   if (!soundOn || !synth) return;
   try {
     if (append) {  // 앞 말이 끝나면 이어서
@@ -1320,6 +1318,9 @@ const INTRO = {
 };
 function intro(name) {
   const t = INTRO[name]; if (!t) return;
+  // 설명은 그 놀이를 처음 할 때 한 번만 (다시 듣고 싶으면 제목 🔊)
+  if (store.get('kk.intro.' + name, false)) return;
+  store.set('kk.intro.' + name, true);
   const q = lastSaid;
   introUntil = performance.now() + t.length * 190;  // 대략 설명이 끝날 때까지는 다른 말이 끊지 않게
   lastSaid = t;
@@ -1361,7 +1362,7 @@ function openCat(k) {
   go('cat');
 }
 function goBack() { if (lastCat && current !== 'cat' && current !== 'home') openCat(lastCat); else go('home'); }
-document.querySelectorAll('[data-cat]').forEach(b => b.addEventListener('click', () => { SND.tap(); openCat(b.dataset.cat); say(CATS[b.dataset.cat][0].split(' ')[1] + '! 하고 싶은 놀이를 골라요'); }));
+document.querySelectorAll('[data-cat]').forEach(b => b.addEventListener('click', () => { SND.tap(); openCat(b.dataset.cat); say(CATS[b.dataset.cat][0].split(' ')[1]); }));
 $('home').querySelector('h1').addEventListener('click', () => say(INTRO.home));
 $('catHome').addEventListener('click', () => go('home'));
 document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => { SND.tap(); go(b.dataset.go); }));
@@ -1692,7 +1693,7 @@ const COUNT_WORD = ['하나!','둘!','셋!','넷!','다섯!','여섯!','일곱!'
    ========================================================= */
 (() => {
   const SETS = 3;
-  let n = store.get('kk.mem.n', 6), open = [], lock = false, matched = 0, tries = 0, done = 0;
+  let n = store.get('kk.mem.n', 4), open = [], lock = false, matched = 0, tries = 0, done = 0;
   // 시간: 카드를 고르는 동안만 재요 (축하 화면 시간은 빼고)
   let elapsed = 0, runSince = 0, clock = null;
   const now = () => elapsed + (runSince ? (performance.now() - runSince) / 1000 : 0);
@@ -2967,7 +2968,7 @@ function lightFingers(container, count, gap = 400) {
     ['물방울', [[[50, 10], ...arc(50, 60, 26, -Math.PI * .15, Math.PI * 1.15, 24), [50, 10]]]]
   ];
   const INK = ['#ff5b6e','#ff9f43','#3fbf3f','#2f9be0','#7a5cff','#3b2a1e'];
-  const TW = [1.2, 2, 3, 4.2, 6, 8]; let tw = store.get('kk.tr.tw', 1);
+  const TW = [1.2, 2, 3, 4.2, 6, 8]; let tw = store.get('kk.tr.tw', 0);
   const SETS = { 1: 5, 2: 3 };
   let lv = store.get('kk.tr.lv', 1), order = [], k = 0, done = 0, strokesU = [], cur = null, ink = 3, solved = false;
 
@@ -3006,7 +3007,7 @@ function lightFingers(container, count, gap = 400) {
     $('trace').style.setProperty('--mb', m + 'px'); $('trace').style.setProperty('--tb', Math.max(160, b) + 'px');
   }
   function load() {
-    strokesU = []; solved = false;
+    strokesU = []; solved = false; $('trNextRow').classList.add('hidden');
     $('trModel').classList.toggle('hidden', lv !== 2);
     sizeBox(); render(); renderModel();
     const name = lv === 1 ? order[k][0] : order[k][0];
@@ -3024,9 +3025,19 @@ function lightFingers(container, count, gap = 400) {
     solved = true; render(); SND.yay(); burst($('trSvg'), 12);
     done++; setProg('trace', done, SETS[lv]);
     const name = order[k][0];
-    if (done >= SETS[lv]) gT(() => finish(lv === 1 ? '따라 그리기 완성!' : '그림 박사!', `우와! ${name}까지 다 그렸어요!`, lv === 1 ? () => { lv = 2; store.set('kk.tr.lv', 2); segSelect($('trLevels'), 'n', 2); start(); } : start, lv === 1 ? '2단계로! ▶' : '한 번 더! 🔄'), 700);
-    else gT(() => cheer('✏️', `${name} 잘 그렸어요!`, `우와! ${name} 잘 그렸어요!`, () => { k = (k + 1) % order.length; load(); }), 500);
+    // 그림은 그대로 두고, 저장하거나 '다음 그림'을 누를 때까지 기다려요
+    $('trMsg').textContent = `${name} 잘 그렸어요! 🎉`;
+    say(`우와! ${name} 잘 그렸어요!`);
+    $('trNextRow').classList.remove('hidden');
+    $('trNext').textContent = done >= SETS[lv] ? '완성! 🏆' : '다음 그림 ▶';
   }
+  $('trNext').addEventListener('click', () => {
+    $('trNextRow').classList.add('hidden');
+    const name = order[k][0];
+    if (done >= SETS[lv]) finish(lv === 1 ? '따라 그리기 완성!' : '그림 박사!', `우와! ${name}까지 다 그렸어요!`, lv === 1 ? () => { lv = 2; store.set('kk.tr.lv', 2); segSelect($('trLevels'), 'n', 2); start(); } : start, lv === 1 ? '2단계로! ▶' : '한 번 더! 🔄');
+    else { k = (k + 1) % order.length; load(); }
+  });
+  $('trSave2').addEventListener('click', () => $('trSave').click());
   // 그리기
   const svg = $('trSvg');
   const pt = e => { const r = svg.getBoundingClientRect(); return [(e.clientX - r.left) / r.width * 100, (e.clientY - r.top) / r.height * 100]; };
@@ -3091,7 +3102,7 @@ function lightFingers(container, count, gap = 400) {
   $('trLevels').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; lv = +b.dataset.n; store.set('kk.tr.lv', lv); segSelect($('trLevels'), 'n', lv); start(); });
   palette();
   sizePicker($('trSizes'), TW.length, tw, i => { tw = i; store.set('kk.tr.tw', i); });
-  GAMES.trace = { enter() { segSelect($('trLevels'), 'n', lv); requestAnimationFrame(start); }, resize() { sizeBox(); } };
+  GAMES.trace = { enter() { lv = 1; store.set('kk.tr.lv', 1); segSelect($('trLevels'), 'n', lv);  /* 들어올 때는 늘 1단계 점선부터 */ requestAnimationFrame(start); }, resize() { sizeBox(); } };
 })();
 
 /* =========================================================
@@ -3101,7 +3112,7 @@ let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTime
 
 renderStickers(); renderPet();
 
-const APP_VERSION = 31;  // sw.js의 kokkok-v 숫자와 같게
+const APP_VERSION = 34;  // sw.js의 kokkok-v 숫자와 같게
 $('verNote').textContent = '버전 ' + APP_VERSION;
 // 어른용: 새 버전 받기 (아래로 당겨 새로고침은 아이가 놀다 실수로 하지 않게 막혀 있어요)
 $('updBtn').addEventListener('click', async () => {
