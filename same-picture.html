@@ -444,6 +444,21 @@
     .overlay { gap: 8px; } .overlay .demo { font-size: 34px; } .overlay h1 { font-size: 28px; }
   }
   @media (orientation: landscape) { .lspad { grid-template-columns: repeat(6, 1fr); max-width: 560px; } .lspad button { height: 54px; } }
+  /* ---------- 가로 넓은 화면(태블릿·눕힌 폰): 그림판은 왼쪽 크게, 도구는 오른쪽 ---------- */
+  @media (orientation: landscape) and (min-width: 760px) {
+    .bar { max-width: none; }
+    #draw, #trace, #color.painting {
+      display: grid; grid-template-columns: minmax(0, 1fr) minmax(250px, 32%);
+      grid-template-rows: auto repeat(8, auto) 1fr; column-gap: 10px; align-content: stretch;
+    }
+    #draw > *, #trace > *, #color.painting > * { grid-column: 2; justify-self: center; align-self: center; width: auto; max-width: 100%; }
+    #draw > .bar, #trace > .bar, #color.painting > .bar { grid-column: 1 / -1; grid-row: 1; justify-self: stretch; width: auto; }
+    #draw > #dWrap, #trace > #trWrap, #color.painting > #colWrap { grid-column: 1; grid-row: 2 / -1; align-self: stretch; justify-self: stretch; min-height: 0; width: auto; }
+    #draw .palette, #trace .palette, #color.painting .palette, #draw .sizes, #trace .sizes, #color.painting .sizes { max-width: 300px; }
+    #trace .tools, #color.painting .tools { flex-wrap: wrap; justify-content: center; max-width: 300px; }
+    #trace .wnav { flex-wrap: wrap; justify-content: center; }
+    #trWrap { flex-direction: row !important; }
+  }
 </style>
 </head>
 <body>
@@ -2217,7 +2232,7 @@ const COUNT_WORD = ['하나!','둘!','셋!','넷!','다섯!','여섯!','일곱!'
     $('colBox').style.setProperty('--cb', Math.max(200, s) + 'px');
   }
   function pickScreen() {
-    page = null;
+    page = null; $('color').classList.remove('painting');
     $('colTitle').textContent = '무엇을 칠할까?'; $('colReset').classList.add('hidden');
     $('colPick').classList.remove('hidden'); ['colWrap','colPal','colTools','colSizes'].forEach(i => $(i).classList.add('hidden'));
     $('colPick').innerHTML = '';
@@ -2258,7 +2273,7 @@ const COUNT_WORD = ['하나!','둘!','셋!','넷!','다섯!','여섯!','일곱!'
     store.set('kk.col2t.' + i, t.toDataURL('image/jpeg', .8));
   }
   function openPage(i) {
-    page = i; const [e, name, inner] = PAGES[i];
+    page = i; const [e, name, inner] = PAGES[i]; $('color').classList.add('painting');
     $('colTitle').textContent = `${e} ${name}`; $('colReset').classList.remove('hidden');
     $('colPick').classList.add('hidden'); ['colWrap','colPal','colTools','colSizes'].forEach(k => $(k).classList.remove('hidden'));
     sizeBox(); build(inner);
@@ -3356,7 +3371,7 @@ let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTime
 
 renderStickers(); renderPet();
 
-const APP_VERSION = 41;  // sw.js의 kokkok-v 숫자와 같게
+const APP_VERSION = 42;  // sw.js의 kokkok-v 숫자와 같게
 $('verNote').textContent = '버전 ' + APP_VERSION;
 // 어른용: 새 버전 받기 (아래로 당겨 새로고침은 아이가 놀다 실수로 하지 않게 막혀 있어요)
 $('updBtn').addEventListener('click', async () => {
