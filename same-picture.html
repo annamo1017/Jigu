@@ -126,7 +126,10 @@
   .spk.sm { width: 40px; height: 40px; font-size: 20px; }
 
   /* ---------- 별 · 친구 ---------- */
-  .petcard { border: none; background: #fff; border-radius: 24px; margin: 6px 16px 8px; padding: 8px 16px; display: flex; align-items: center; gap: 12px; width: calc(100% - 32px); max-width: 608px; box-shadow: 0 4px 0 rgba(0,0,0,.07); flex: none; text-align: left; }
+  .petrow { display: flex; gap: 8px; width: calc(100% - 32px); max-width: 608px; margin: 6px 16px 8px; flex: none; }
+  .petreset { border: none; background: #fff; border-radius: 20px; width: 58px; flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 20px; color: #a07a5a; box-shadow: 0 4px 0 rgba(0,0,0,.07); }
+  .petreset span { font-size: 11px; }
+  .petcard { border: none; background: #fff; border-radius: 24px; margin: 0; padding: 8px 16px; display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; box-shadow: 0 4px 0 rgba(0,0,0,.07); flex: none; text-align: left; }
   .petcard .pe { font-size: 54px; line-height: 1; }
   .petcard .pe.grow { animation: bounceIn .7s cubic-bezier(.3,1.8,.5,1); }
   .petcard .pinfo { flex: 1; display: flex; flex-direction: column; gap: 4px; }
@@ -468,7 +471,7 @@
 <!-- ================= 홈 ================= -->
 <section class="view" id="home">
   <h1>콕콕 놀이터</h1>
-  <button class="petcard" id="petCard"><span class="pe" id="petE">🥚</span><span class="pinfo"><span class="pn"><b id="petName">신기한 알</b> · ⭐ <b id="petStars">0</b></span><span class="pbar"><i id="petBar"></i></span><span class="pnx" id="petNext"></span></span></button>
+  <div class="petrow"><button class="petcard" id="petCard"><span class="pe" id="petE">🥚</span><span class="pinfo"><span class="pn"><b id="petName">신기한 알</b> · ⭐ <b id="petStars">0</b></span><span class="pbar"><i id="petBar"></i></span><span class="pnx" id="petNext"></span></span></button><button class="petreset" id="petReset" aria-label="처음부터 키우기">🔄<span>처음부터</span></button></div>
   <div class="tiles cats">
     <button class="tile" style="--c:#9b8cff" data-cat="mem"><span class="e">🧠</span>기억력</button>
     <button class="tile" style="--c:#6ccf8a" data-cat="art"><span class="e">🎨</span>그림놀이</button>
@@ -1318,6 +1321,18 @@ function renderPet() {
     setTimeout(() => { if (current !== 'home') return; starRain(50); SND.big(); $('petE').classList.add('grow'); say(`우와! 친구가 ${cur[2]}${josa(cur[2], '가', '이')} 되었어요!`); }, 300);
   }
 }
+$('petReset').addEventListener('click', () => {
+  const d = document.createElement('div'); d.className = 'cheer';
+  d.innerHTML = `<div class="e" style="font-size:64px">🥚</div><div class="t" style="font-size:24px">친구를 처음부터 키울까요?</div>
+    <div class="fs">별이 0개가 되고 친구가 다시 알이 돼요</div>
+    <div class="row"><button class="big" data-y style="font-size:20px;padding:10px 22px">친구만 처음부터</button></div>
+    <div class="row"><button class="sub" data-all>스티커도 모두 지우기</button><button class="sub" data-n>아니요</button></div>`;
+  const reset = all => { store.set('kk.stars', 0); store.set('kk.petNew', false); if (all) store.set('kk.stickers', []); d.remove(); renderPet(); renderStickers(); SND.pop(); say('새 친구 알이 생겼어요! 별을 모아 키워 봐요!'); };
+  d.querySelector('[data-y]').addEventListener('click', () => reset(false));
+  d.querySelector('[data-all]').addEventListener('click', () => reset(true));
+  d.querySelector('[data-n]').addEventListener('click', () => d.remove());
+  document.body.appendChild(d);
+});
 $('petCard').addEventListener('click', () => {
   const stars = store.get('kk.stars', 0), k = petStage(stars), nxt = PET[k + 1];
   $('petE').classList.remove('grow'); void $('petE').offsetWidth; $('petE').classList.add('grow'); SND.yay();
@@ -1452,6 +1467,39 @@ function openCat(k) {
   go('cat');
 }
 function goBack() { if (lastCat && current !== 'cat' && current !== 'home') openCat(lastCat); else go('home'); }
+// 폰 아래의 '뒤로'(◁)를 누르면: 열린 창 닫기 → 게임 안 앞 화면 → 카테고리 → 처음 화면
+function backStep() {
+  const top = [...document.querySelectorAll('.cheer, .fin')].pop();
+  if (top) {
+    if (top.classList.contains('fin')) { top.remove(); goBack(); return; }
+    top.dispatchEvent(new Event('pointerdown'));  // 축하 창은 원래대로 닫히며 다음으로
+    if (top.isConnected) top.remove();
+    return;
+  }
+  if (!$('hBig').classList.contains('hidden')) { $('hBig').classList.add('hidden'); return; }
+  if (!$('dAsk').classList.contains('hidden')) { $('dAsk').classList.add('hidden'); return; }
+  const v = current;
+  if (v === 'match' && $('mStart').classList.contains('hidden')) { $('mBack').click(); return; }
+  if (v === 'balloon' && $('blStart').classList.contains('hidden')) { $('blBack').click(); return; }
+  if (v === 'color') { $('colBack').click(); return; }
+  if (v === 'stair') { $('stBack').click(); return; }
+  if (v === 'myname' && !$('nmSet').classList.contains('hidden') && store.get('kk.myname', '')) { GAMES.myname.enter(); return; }
+  if (v === 'home') return 'exit';
+  goBack();
+}
+let backArmed = false, exitTimer = null;
+function armBack() { try { history.pushState({ kk: 1 }, ''); backArmed = true; } catch (e) {} }
+window.addEventListener('popstate', () => {
+  if (!backArmed) return;
+  if (backStep() === 'exit') {
+    if (exitTimer) { clearTimeout(exitTimer); exitTimer = null; backArmed = false; history.back(); return; }  // 두 번 누르면 나가기
+    const t = document.createElement('div'); t.className = 'starpop'; t.style.top = 'auto'; t.style.bottom = '90px'; t.style.fontSize = '18px'; t.style.color = '#5a3e2b';
+    t.textContent = '한 번 더 누르면 나가요'; document.body.appendChild(t); setTimeout(() => t.remove(), 1600);
+    exitTimer = setTimeout(() => { exitTimer = null; }, 2000);
+  }
+  armBack();
+});
+armBack();
 document.querySelectorAll('[data-cat]').forEach(b => b.addEventListener('click', () => { SND.tap(); openCat(b.dataset.cat); say(CATS[b.dataset.cat][0].split(' ')[1]); }));
 $('home').querySelector('h1').addEventListener('click', () => say(INTRO.home));
 $('catHome').addEventListener('click', () => go('home'));
@@ -3371,7 +3419,7 @@ let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTime
 
 renderStickers(); renderPet();
 
-const APP_VERSION = 42;  // sw.js의 kokkok-v 숫자와 같게
+const APP_VERSION = 43;  // sw.js의 kokkok-v 숫자와 같게
 $('verNote').textContent = '버전 ' + APP_VERSION;
 // 어른용: 새 버전 받기 (아래로 당겨 새로고침은 아이가 놀다 실수로 하지 않게 막혀 있어요)
 $('updBtn').addEventListener('click', async () => {
