@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>우주네컷</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&family=Cormorant+Garamond:ital,wght@0,600;1,500;1,600&family=Nanum+Pen+Script&family=Gowun+Batang:wght@700&family=Nunito:wght@800&family=Syncopate:wght@700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&family=Poppins:wght@500;600&family=Gowun+Dodum&family=Nanum+Pen+Script&family=Syncopate:wght@700&display=swap" rel="stylesheet">
 <style>
 :root{
   /* layout: 왼쪽에 4x6 인화지 미리보기, 오른쪽에 번호 순서대로 따라가는 조작 패널 */
@@ -146,8 +146,9 @@ var WX=40,WW=520,WH=300,WY0=182,STEP=310;   /* 사진 칸 4개 */
 var BOT=WY0+3*STEP+WH;                       /* 1592: 아래 글자 영역 시작 */
 var PW=1040,PH=600;                          /* 저장되는 한 컷 해상도 */
 var $=function(id){return document.getElementById(id)};
+var DODUM="'Gowun Dodum','IBM Plex Sans KR',sans-serif";
 var SERIF="'Cormorant Garamond',Georgia,'Times New Roman',serif",PEN="'Nanum Pen Script','Gaegu',cursive",BATANG="'Gowun Batang','Nanum Myeongjo',serif";
-var BODY="'IBM Plex Sans KR','Apple SD Gothic Neo','Malgun Gothic',sans-serif",ROUND="Nunito,'Arial Rounded MT Bold','IBM Plex Sans KR',sans-serif";
+var BODY="'IBM Plex Sans KR','Apple SD Gothic Neo','Malgun Gothic',sans-serif",ROUND="Poppins,'Helvetica Neue',Arial,'IBM Plex Sans KR',sans-serif";
 var MOTTO="CELEBRATING VOYAGER 1 · ONE LIGHT-DAY FROM EARTH";
 var MILESTONE="MILESTONE 2026.11.18 · 25,900,000,000 km";
 var SITE="photojournal.jpl.nasa.gov";
@@ -215,7 +216,7 @@ function earthMark(c,x,y){
   c.fillStyle=g;c.beginPath();c.arc(x,y,26,0,6.283);c.fill();
   c.fillStyle="#eef5fd";c.beginPath();c.arc(x,y,3.5,0,6.283);c.fill();
   c.strokeStyle="rgba(255,255,255,.65)";c.lineWidth=1.5;c.beginPath();c.arc(x,y,16,0,6.283);c.stroke();
-  c.save();c.shadowColor="rgba(0,0,0,.8)";c.shadowBlur=6;c.fillStyle="rgba(240,246,253,.95)";c.font="600 17px "+BODY;c.textAlign="center";c.textBaseline="top";c.fillText("earth",x,y+22);c.restore();
+  c.save();c.shadowColor="rgba(0,0,0,.8)";c.shadowBlur=6;c.fillStyle="rgba(240,246,253,.95)";c.font="500 17px "+ROUND;c.textAlign="center";c.textBaseline="top";c.fillText("earth",x,y+22);c.restore();
 }
 function drawJupiter(c,cx,cy,R){
   c.save();c.translate(cx,cy);c.rotate(.06);c.beginPath();c.arc(0,0,R,0,6.283);c.clip();
@@ -255,7 +256,7 @@ var frames=[
     if(ready(im)){var top=ty-ey*k;c.filter="brightness(1.35)";c.drawImage(im,0,top,SW,im.naturalHeight*k);c.filter="none";
       var g=c.createLinearGradient(0,top,0,top+140);g.addColorStop(0,"#070308");g.addColorStop(1,"rgba(7,3,8,0)");c.fillStyle=g;c.fillRect(0,top-1,SW,141)}
     var t=c.createLinearGradient(0,0,0,WY0+60);t.addColorStop(0,"rgba(3,5,10,.6)");t.addColorStop(1,"rgba(3,5,10,0)");c.fillStyle=t;c.fillRect(0,0,SW,WY0+60);
-    var x=ex*k,r=13*k;c.save();c.shadowColor="rgba(0,0,0,.9)";c.shadowBlur=6;c.fillStyle="rgba(205,226,248,.95)";c.font="600 17px "+BODY;c.textAlign="left";c.textBaseline="middle";
+    var x=ex*k,r=13*k;c.save();c.shadowColor="rgba(0,0,0,.9)";c.shadowBlur=6;c.fillStyle="rgba(205,226,248,.95)";c.font="500 17px "+ROUND;c.textAlign="left";c.textBaseline="middle";
     c.fillText("earth",x+r+8,ty-r-6);c.restore();
   }},
   {id:"jupiter",name:"목성",title:"jupiter",credit:"IMAGE NASA/JPL · PIA01509 · "+SITE,right:330,bg:function(c){
@@ -282,17 +283,17 @@ function base(idx){
   var cv=document.createElement("canvas");cv.width=SW;cv.height=SH;var c=cv.getContext("2d");
   f.bg(c);liftBlacks(c);
   c.save();c.shadowColor="rgba(0,0,0,.85)";c.shadowBlur=10;c.textBaseline="alphabetic";
-  c.fillStyle="rgba(214,230,248,.92)";fitSpaced(c,MOTTO,"600 %px "+SERIF,17,2.2,WW);spaced(c,MOTTO,SW/2,156,2.2,"center");
-  c.fillStyle="rgba(255,255,255,.72)";fitSpaced(c,f.credit,"500 %px "+BODY,12,.8,WW);spaced(c,f.credit,SW/2,SH-40,.8,"center");
+  c.fillStyle="rgba(214,230,248,.92)";fitSpaced(c,MOTTO,"500 %px "+ROUND,15,1.4,WW);spaced(c,MOTTO,SW/2,156,1.4,"center");
+  c.fillStyle="rgba(255,255,255,.72)";fitSpaced(c,f.credit,"500 %px "+ROUND,11,.6,WW);spaced(c,f.credit,SW/2,SH-40,.6,"center");
   c.restore();
   return cache[f.id]=cv;
 }
 function titleText(c,text){
-  /* 속이 빈 흰 테두리 글씨 (굵은 둥근 고딕) */
+  /* 속이 빈 가는 흰 테두리 글씨 (Poppins) */
   if(!text)return;c.save();c.textBaseline="alphabetic";c.textAlign="center";c.lineJoin="round";
-  fit(c,text,"800",ROUND,80,WW-10);
-  c.shadowColor="rgba(0,0,0,.55)";c.shadowBlur=10;c.strokeStyle="rgba(255,255,255,.95)";c.lineWidth=3.2;c.strokeText(text,SW/2,112);
-  c.shadowBlur=0;c.strokeText(text,SW/2,112);c.restore();
+  fit(c,text,"600",ROUND,52,WW-20);
+  c.shadowColor="rgba(0,0,0,.5)";c.shadowBlur=6;c.strokeStyle="#fff";c.lineWidth=1.4;c.strokeText(text,SW/2,108);
+  c.shadowBlur=0;c.strokeText(text,SW/2,108);c.restore();
 }
 function wrap(c,text,maxW){
   /* 띄어쓰기 단위로 줄바꿈, 한 단어가 너무 길 때만 글자 단위로 */
@@ -314,10 +315,10 @@ function bottomText(c){
     lines.forEach(function(l,i){c.fillText(l,SW/2,BOT+52+i*40)});
   }
   c.textAlign="left";
-  c.fillStyle="#fbf8f1";fit(c,"shot on "+ymd(d),"italic 600",SERIF,34,right-x);c.fillText("shot on "+ymd(d),x,BOT+152);
+  c.fillStyle="#fbf8f1";fit(c,"shot on "+ymd(d),"600",ROUND,28,right-x);c.fillText("shot on "+ymd(d),x,BOT+152);
   var y=BOT+186;
-  if(state.name){c.fillStyle="#f1ece2";fit(c,state.name,"700",BATANG,21,right-x);c.fillText(state.name,x,y);y+=32}
-  c.fillStyle="rgba(176,208,240,.92)";fitSpaced(c,MILESTONE,"600 %px "+SERIF,15,1.4,right-x);spaced(c,MILESTONE,x,y,1.4,"left");
+  if(state.name){c.fillStyle="#f1ece2";fit(c,state.name,"400",DODUM,23,right-x);c.fillText(state.name,x,y);y+=32}
+  c.fillStyle="rgba(176,208,240,.92)";fitSpaced(c,MILESTONE,"500 %px "+ROUND,13,1,right-x);spaced(c,MILESTONE,x,y,1,"left");
   c.restore();
 }
 /* 스트립 한 줄 그리기. live: 지금 찍는 칸 번호, src: 카메라 영상 */
@@ -329,7 +330,7 @@ function drawStrip(c,live,src,mirror){
     c.save();rr(c,WX,y,WW,WH,8);c.clip();
     if(i===live&&src){c.fillStyle="#000";c.fillRect(WX,y,WW,WH);if(mirror){c.translate(2*WX+WW,0);c.scale(-1,1)}cover(c,src,WX,y,WW,WH)}
     else if(p){cover(c,p,WX,y,WW,WH,.5,p._ay==null?.5:p._ay)}
-    else{c.fillStyle="rgba(5,8,14,.62)";c.fillRect(WX,y,WW,WH);c.fillStyle="rgba(255,255,255,.55)";c.font="italic 500 130px "+SERIF;c.textAlign="center";c.textBaseline="middle";c.fillText(String(i+1),SW/2,y+WH/2+6)}
+    else{c.fillStyle="rgba(5,8,14,.62)";c.fillRect(WX,y,WW,WH);c.fillStyle="rgba(255,255,255,.55)";c.font="500 110px "+ROUND;c.textAlign="center";c.textBaseline="middle";c.fillText(String(i+1),SW/2,y+WH/2+6)}
     c.restore();
     rr(c,WX,y,WW,WH,8);c.lineWidth=i===live?6:3;c.strokeStyle=i===live?"#9fc3ea":"rgba(255,255,255,.9)";c.stroke();
   }
@@ -454,7 +455,7 @@ function refresh(){cache={};buildAll();render()}
 Object.keys(SRC).forEach(function(k){var im=new Image();im.onload=refresh;IMG[k]=im;im.src=SRC[k]});
 refresh();
 if(document.fonts&&document.fonts.load){
-  Promise.all([document.fonts.load("italic 500 60px 'Cormorant Garamond'"),document.fonts.load("600 20px 'Cormorant Garamond'"),document.fonts.load("italic 600 30px 'Cormorant Garamond'"),document.fonts.load("40px 'Nanum Pen Script'","가나다 보이저"),document.fonts.load("700 20px 'Gowun Batang'","가나다"),document.fonts.load("600 24px 'IBM Plex Sans KR'","가 A")]).then(refresh,function(){});
+  Promise.all([document.fonts.load("600 52px Poppins"),document.fonts.load("500 15px Poppins"),document.fonts.load("23px 'Gowun Dodum'","가나다 김보이"),document.fonts.load("40px 'Nanum Pen Script'","가나다 보이저"),document.fonts.load("600 24px 'IBM Plex Sans KR'","가 A")]).then(refresh,function(){});
 }
 })();
 </script>
