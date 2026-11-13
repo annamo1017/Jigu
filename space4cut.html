@@ -268,10 +268,19 @@ var frames=[
   }}
 ];
 var cache={};
+/* 인화용 보정: 염료승화 인화는 화면보다 어둡게 나오므로 프레임 바탕의 검은색을 짙은 남색으로 끌어올리고
+   어두운 부분(빛줄기, 별, 행성 그림자)을 살린다. 학생 사진에는 적용하지 않는다. */
+var LIFT=[30,36,56],GAMMA=.8,LUT=[[],[],[]];
+(function(){for(var ch=0;ch<3;ch++)for(var v=0;v<256;v++)LUT[ch][v]=Math.round(LIFT[ch]+(255-LIFT[ch])*Math.pow(v/255,GAMMA))})();
+function liftBlacks(c){
+  try{var d=c.getImageData(0,0,SW,SH),p=d.data;
+    for(var i=0;i<p.length;i+=4){p[i]=LUT[0][p[i]];p[i+1]=LUT[1][p[i+1]];p[i+2]=LUT[2][p[i+2]]}
+    c.putImageData(d,0,0)}catch(e){}
+}
 function base(idx){
   var f=frames[idx];if(cache[f.id])return cache[f.id];
   var cv=document.createElement("canvas");cv.width=SW;cv.height=SH;var c=cv.getContext("2d");
-  f.bg(c);
+  f.bg(c);liftBlacks(c);
   c.save();c.shadowColor="rgba(0,0,0,.85)";c.shadowBlur=10;c.textBaseline="alphabetic";
   c.fillStyle="rgba(214,230,248,.92)";fitSpaced(c,MOTTO,"600 %px "+SERIF,17,2.2,WW);spaced(c,MOTTO,SW/2,156,2.2,"center");
   c.fillStyle="rgba(255,255,255,.72)";fitSpaced(c,f.credit,"500 %px "+BODY,12,.8,WW);spaced(c,f.credit,SW/2,SH-40,.8,"center");
@@ -279,10 +288,11 @@ function base(idx){
   return cache[f.id]=cv;
 }
 function titleText(c,text){
-  if(!text)return;c.save();c.textBaseline="alphabetic";c.textAlign="center";
-  fit(c,text,"italic 500",SERIF,78,WW);
-  c.shadowColor="rgba(160,200,255,.55)";c.shadowBlur=22;c.fillStyle="#fbf8f1";c.fillText(text,SW/2,110);
-  c.shadowColor="rgba(0,0,0,.7)";c.shadowBlur=8;c.fillText(text,SW/2,110);c.restore();
+  /* 속이 빈 흰 테두리 글씨 (굵은 둥근 고딕) */
+  if(!text)return;c.save();c.textBaseline="alphabetic";c.textAlign="center";c.lineJoin="round";
+  fit(c,text,"800",ROUND,80,WW-10);
+  c.shadowColor="rgba(0,0,0,.55)";c.shadowBlur=10;c.strokeStyle="rgba(255,255,255,.95)";c.lineWidth=3.2;c.strokeText(text,SW/2,112);
+  c.shadowBlur=0;c.strokeText(text,SW/2,112);c.restore();
 }
 function wrap(c,text,maxW){
   /* 띄어쓰기 단위로 줄바꿈, 한 단어가 너무 길 때만 글자 단위로 */
@@ -318,7 +328,7 @@ function drawStrip(c,live,src,mirror){
     var y=winY(i),p=state.photos[i];
     c.save();rr(c,WX,y,WW,WH,8);c.clip();
     if(i===live&&src){c.fillStyle="#000";c.fillRect(WX,y,WW,WH);if(mirror){c.translate(2*WX+WW,0);c.scale(-1,1)}cover(c,src,WX,y,WW,WH)}
-    else if(p){cover(c,p,WX,y,WW,WH)}
+    else if(p){cover(c,p,WX,y,WW,WH,.5,p._ay==null?.5:p._ay)}
     else{c.fillStyle="rgba(5,8,14,.62)";c.fillRect(WX,y,WW,WH);c.fillStyle="rgba(255,255,255,.55)";c.font="italic 500 130px "+SERIF;c.textAlign="center";c.textBaseline="middle";c.fillText(String(i+1),SW/2,y+WH/2+6)}
     c.restore();
     rr(c,WX,y,WW,WH,8);c.lineWidth=i===live?6:3;c.strokeStyle=i===live?"#9fc3ea":"rgba(255,255,255,.9)";c.stroke();
@@ -363,13 +373,13 @@ var slotBtns=[];
   b.innerHTML='<canvas width="260" height="150" hidden></canvas><span><b>'+(i+1)+'</b>찍기</span>';
   b.addEventListener("click",function(){openCam(i)});
   $("slots").appendChild(b);slotBtns.push(b)})(i)}})();
-function setPhoto(i,cv){
+function setPhoto(i,cv,when){
   state.photos[i]=cv;
   var b=slotBtns[i],t=b.querySelector("canvas");
-  if(cv){t.hidden=false;t.getContext("2d").drawImage(cv,0,0,260,150);b.classList.add("has");b.querySelector("span").innerHTML="<b>"+(i+1)+"</b>다시 찍기"}
+  if(cv){t.hidden=false;cover(t.getContext("2d"),cv,0,0,260,150,.5,cv._ay==null?.5:cv._ay);b.classList.add("has");b.querySelector("span").innerHTML="<b>"+(i+1)+"</b>다시 찍기"}
   else{t.hidden=true;b.classList.remove("has");b.querySelector("span").innerHTML="<b>"+(i+1)+"</b>찍기"}
   var n=state.photos.filter(Boolean).length;
-  if(n===0)state.shotDate=null;else if(!state.shotDate)state.shotDate=new Date();
+  if(n===0)state.shotDate=null;else if(!state.shotDate)state.shotDate=when?new Date(when):new Date();
   $("saveBtn").disabled=$("shareBtn").disabled=n<4;
   say(n<4?"사진 "+n+"/4컷. 4컷을 모두 찍으면 저장할 수 있습니다.":"4컷 완성. 저장 버튼을 누르세요.");
   render();
@@ -420,6 +430,7 @@ $("shootBtn").addEventListener("click",async function(){
   }
   shooting=false;
 });
+
 
 /* ---------- 저장 ---------- */
 function finalBlob(){return new Promise(function(res){clearTimeout(timer);render();out.toBlob(res,"image/jpeg",.95)})}
