@@ -452,6 +452,8 @@
   .wdo.yes { background: #c9f2c9; animation: pop .5s; } .wdo.no { animation: fno .45s; background: #ffe0e6; }
 
   /* ---------- 다 쓴 글자 꾸미기 ---------- */
+  .toast { position: fixed; left: 50%; top: 14px; transform: translateX(-50%); background: #5a3e2b; color: #fff; font-size: 16px; padding: 10px 18px; border-radius: 22px; z-index: 300; box-shadow: 0 6px 16px rgba(0,0,0,.2); transition: opacity .5s; pointer-events: none; white-space: nowrap; }
+  .toast.out { opacity: 0; }
   .bead { transform-box: fill-box; transform-origin: center; animation: beadIn .35s backwards cubic-bezier(.3,1.6,.6,1); }
   @keyframes beadIn { from { transform: scale(0); } }
 
@@ -712,14 +714,14 @@
   <div class="bar"><div class="navbtns"><button class="nb" data-home><b>⬅️</b>뒤로</button><button class="nb" data-tohome><b>🏠</b>처음</button></div><div class="ttl">길 찾기</div><button class="round" id="mzNew" title="다른 길">🔄</button></div>
   <div class="seg" id="mzLevels"><button data-n="3">🐣 3칸</button><button data-n="5">🐥 5칸</button><button data-n="8">🐤 8칸</button><button data-n="11">🦅 11칸</button></div>
   <div class="msg" id="mzMsg"></div>
-  <div class="mzwrap" id="mzWrap"><svg id="mzSvg"></svg></div>
+  <div class="mzwrap" id="mzWrap"><svg id="mzSvg" class="ink"></svg></div>
 </section>
 
 <section class="view hidden" id="build">
   <div class="bar"><div class="navbtns"><button class="nb" data-home><b>⬅️</b>뒤로</button><button class="nb" data-tohome><b>🏠</b>처음</button></div><div class="ttl">블록 만들기</div><div class="navbtns"><button class="nb" id="bdPickBtn"><b>🖼️</b>고르기</button><button class="nb" id="bdSkip"><b>⏭️</b>다음</button></div></div>
   <div class="seg" id="bdLevels"><button data-n="1">🐣 자리 보여요</button><button data-n="2">🐥 그림자만</button><button data-n="3">🐤 돌려서 맞추기</button></div>
   <div class="msg" id="bdMsg"></div>
-  <div class="bdwrap" id="bdWrap"><svg id="bdSvg"></svg><div class="bdpick hidden" id="bdPick"></div></div>
+  <div class="bdwrap" id="bdWrap"><svg id="bdSvg" class="ink"></svg><div class="bdpick hidden" id="bdPick"></div></div>
 </section>
 
 <section class="view hidden" id="missing">
@@ -803,13 +805,14 @@
 
 <!-- ================= 5. 색칠하기 ================= -->
 <section class="view hidden" id="color">
-  <div class="bar"><div class="navbtns"><button class="nb" id="colBack"><b>⬅️</b>뒤로</button><button class="nb" data-tohome><b>🏠</b>처음</button></div><div class="ttl" id="colTitle">무엇을 칠할까?</div><button class="round hidden" id="colReset" title="다시 칠하기">🔄</button></div>
+  <div class="bar"><div class="navbtns"><button class="nb" id="colBack"><b>⬅️</b>뒤로</button><button class="nb" data-tohome><b>🏠</b>처음</button></div><div class="ttl" id="colTitle">무엇을 칠할까?</div><span style="width:30px"></span></div>
   <div class="pickgrid" id="colPick"></div>
   <div class="colorwrap hidden" id="colWrap"><div class="cbox" id="colBox"><canvas id="colPaint"></canvas><canvas id="colLine"></canvas></div></div>
   <div class="tools hidden" id="colTools">
     <button class="tool on" id="colPen">🖍️</button>
     <button class="tool" id="colErase">🧽</button>
     <button class="tool on" id="colGuard">🛡️ 선 안에만</button>
+    <button class="tool" id="colClear">🗑️ 모두 지우기</button>
     <button class="tool" id="colDone">✅</button>
     <button class="tool" id="colSave">💾</button>
   </div>
@@ -1099,6 +1102,43 @@ function starRain(count = 90) {
   }, i * 45);
 }
 // 한 판 끝났을 때 잠깐 뜨는 축하 화면
+/* ---------- 손바닥 무시 (그리기 화면) ----------
+   · 펜(S펜 등)을 쓰면: 펜이 닿거나 화면 위에 떠 있는 동안 + 3초 뒤까지 손가락·손바닥 터치는 무시
+   · 먼저 닿아 있던 손바닥은 펜이 닿는 순간 취소 (그리던 획도 지워요)
+   · 손가락만 쓸 때: 닿는 면이 넓으면(손바닥) 무시, 한 번에 한 손가락만 그려요 */
+(() => {
+  const active = new Map(), rejected = new Set();
+  let lastPen = 0, told = false;
+  const surf = e => e.target && e.target.closest && e.target.closest('.ink');
+  const kill = e => { e.stopImmediatePropagation(); if (e.cancelable) e.preventDefault(); };
+  document.addEventListener('pointerdown', e => {
+    if (!surf(e)) return;
+    if (e.pointerType === 'pen') {
+      lastPen = performance.now();
+      if (!told) { told = true; toast('✏️ 펜 모드 · 손바닥이 닿아도 괜찮아요'); }
+      for (const [id, a] of [...active]) if (a.type === 'touch') {
+        rejected.add(id); active.delete(id);
+        const c = new PointerEvent('pointercancel', { pointerId: id, pointerType: 'touch', bubbles: true }); c.kkPalm = true; a.el.dispatchEvent(c);
+      }
+      active.set(e.pointerId, { type: 'pen', el: e.target }); return;
+    }
+    if (e.pointerType === 'touch') {
+      const big = Math.max(e.width || 0, e.height || 0) > 38;
+      const busy = [...active.values()].some(a => a.el.isConnected);
+      if (performance.now() - lastPen < 3000 || big || busy) { rejected.add(e.pointerId); kill(e); return; }
+    }
+    active.set(e.pointerId, { type: e.pointerType, el: e.target });
+  }, true);
+  ['pointermove', 'pointerup', 'pointercancel'].forEach(t => document.addEventListener(t, e => {
+    if (e.pointerType === 'pen') lastPen = performance.now();  // 펜이 화면 위에 떠 있어도
+    if (rejected.has(e.pointerId) && e.isTrusted) { kill(e); if (t !== 'pointermove') rejected.delete(e.pointerId); return; }
+    if (t !== 'pointermove') active.delete(e.pointerId);
+  }, true));
+})();
+function toast(text) {
+  const d = document.createElement('div'); d.className = 'toast'; d.textContent = text; document.body.appendChild(d);
+  setTimeout(() => d.classList.add('out'), 2600); setTimeout(() => d.remove(), 3200);
+}
 function cheer(emoji, text, voice, then, big) {
   const d = document.createElement('div'); d.className = 'cheer';
   d.innerHTML = `<div class="e">${emoji}</div><div class="t">${esc(text)}</div>`;
@@ -1969,6 +2009,7 @@ function createWriter(svg, hooks) {
     live = el('path', { d: '', stroke: '#4da6ff', 'stroke-width': strokes.length > 6 ? 6 : 8, fill: 'none', 'stroke-linecap': 'round', 'stroke-linejoin': 'round', opacity: .85 });
     svg.appendChild(live);
   }
+  svg.classList.add('ink');
   const pt = e => { const r = svg.getBoundingClientRect(); return [(e.clientX - r.left) / r.width * 100, (e.clientY - r.top) / r.height * 100]; };
   svg.addEventListener('pointerdown', e => {
     if (busy || si >= strokes.length || livePts.length) return;
@@ -1980,8 +2021,9 @@ function createWriter(svg, hooks) {
     for (const ev of evs) livePts.push(pt(ev));
     live.setAttribute('d', d(livePts));
   });
-  const up = () => {
+  const up = e => {
     if (!livePts.length) return;
+    if (e && e.kkPalm) { livePts = []; live.setAttribute('d', ''); return; }  // 손바닥 획은 버려요
     const user = livePts; livePts = [];
     const tpl = strokes[si], L = len(tpl), uL = len(user), k = scaleOf();
     const closed = Math.hypot(tpl[0][0] - tpl[tpl.length - 1][0], tpl[0][1] - tpl[tpl.length - 1][1]) < 2;
@@ -3057,7 +3099,7 @@ const COUNT_WORD = ['하나!','둘!','셋!','넷!','다섯!','여섯!','일곱!'
 (() => {
   const RES = 600, K = RES / 300; // 칠하기 판 해상도 (도안 300 → 600)
   const COLS = ['#ff5b6e','#ff9f43','#ffd93d','#5cd65c','#7fd8ff','#4d7cff','#a66cff','#ff8fcf','#a0703c','#3b2a1e','rainbow'];
-  const paint = $('colPaint'), line = $('colLine');
+  const paint = $('colPaint'), line = $('colLine'); paint.classList.add('ink');
   paint.width = paint.height = line.width = line.height = RES;
   const pc = paint.getContext('2d'), lc = line.getContext('2d');
   const idc = document.createElement('canvas'); idc.width = idc.height = RES; const ic = idc.getContext('2d', { willReadFrequently: true });
@@ -3115,7 +3157,7 @@ const COUNT_WORD = ['하나!','둘!','셋!','넷!','다섯!','여섯!','일곱!'
   }
   function pickScreen() {
     page = null; $('color').classList.remove('painting');
-    $('colTitle').textContent = '무엇을 칠할까?'; $('colReset').classList.add('hidden');
+    $('colTitle').textContent = '무엇을 칠할까?';
     $('colPick').classList.remove('hidden'); ['colWrap','colPal','colTools','colSizes','colPens'].forEach(i => $(i).classList.add('hidden'));
     $('colPick').innerHTML = '';
     PAGES.forEach((p, i) => {
@@ -3156,7 +3198,7 @@ const COUNT_WORD = ['하나!','둘!','셋!','넷!','다섯!','여섯!','일곱!'
   }
   function openPage(i) {
     page = i; const [e, name, inner] = PAGES[i]; $('color').classList.add('painting');
-    $('colTitle').textContent = `${e} ${name}`; $('colReset').classList.remove('hidden');
+    $('colTitle').textContent = `${e} ${name}`;
     $('colPick').classList.add('hidden'); ['colWrap','colPal','colTools','colSizes','colPens'].forEach(k => $(k).classList.remove('hidden'));
     sizeBox(); build(inner);
     pc.globalCompositeOperation = 'source-over'; pc.clearRect(0, 0, RES, RES);
@@ -3235,7 +3277,16 @@ const COUNT_WORD = ['하나!','둘!','셋!','넷!','다섯!','여섯!','일곱!'
     o.fillStyle = '#fff'; o.fillRect(0, 0, RES, RES); o.drawImage(paint, 0, 0); o.drawImage(line, 0, 0);
     saveCanvas(out, '색칠_' + PAGES[page][1]);
   });
-  $('colReset').addEventListener('click', () => { if (page == null) return; store.set('kk.col2.' + page, null); store.set('kk.col2t.' + page, null); pc.clearRect(0, 0, RES, RES); SND.pop(); });
+  $('colClear').addEventListener('click', () => {
+    if (page == null) return;
+    const d = document.createElement('div'); d.className = 'cheer';
+    d.innerHTML = `<div class="e" style="font-size:64px">🗑️</div><div class="t" style="font-size:24px">모두 지울까요?</div>
+      <div class="fs">칠한 색이 다 지워지고 처음 도안으로 돌아가요</div>
+      <div class="row"><button class="big" data-y style="font-size:20px;padding:10px 22px">네, 지울래요</button><button class="sub" data-n>아니요</button></div>`;
+    d.querySelector('[data-y]').addEventListener('click', () => { d.remove(); store.set('kk.col2.' + page, null); store.set('kk.col2t.' + page, null); pc.clearRect(0, 0, RES, RES); SND.pop(); say('깨끗해졌어요! 다시 칠해요'); });
+    d.querySelector('[data-n]').addEventListener('click', () => d.remove());
+    document.body.appendChild(d); SND.tap();
+  });
   let pen = PEN.picker($('colPens'), 'kk.col.pen', k => { pen = k; setTool('pen'); });
   syncGuard(); palette();
   GAMES.color = { enter: pickScreen, resize() { if (page != null) sizeBox(); } };
@@ -3245,7 +3296,7 @@ const COUNT_WORD = ['하나!','둘!','셋!','넷!','다섯!','여섯!','일곱!'
    6. 손가락 그림판
    ========================================================= */
 (() => {
-  const cv = $('dCanvas'), ctx = cv.getContext('2d');
+  const cv = $('dCanvas'), ctx = cv.getContext('2d'); cv.classList.add('ink');
   $('dSave').addEventListener('click', () => saveCanvas(cv, '그림판'));
   const COLS = ['#ff5b6e','#ff9f43','#ffd93d','#5cd65c','#4da6ff','#a66cff','#ff8fcf','#a0703c','#3b2a1e','rainbow'];
   const STAMPS = ['⭐','❤️','🐶','🐱','🌸','🚗','🦋','🍎','☀️','🎈'];
@@ -3350,7 +3401,7 @@ const COUNT_WORD = ['하나!','둘!','셋!','넷!','다섯!','여섯!','일곱!'
   }
   // 글자 한 칸
   function makeBox(ch) {
-    const svg = mk('svg', { viewBox: '0 0 100 100', class: 'nmbox' });
+    const svg = mk('svg', { viewBox: '0 0 100 100', class: 'nmbox ink' });
     const b = { ch, svg, strokes: [], guideLines: strokesFor(ch), ok: false, cur: null };
     const g = mk('g', { class: 'gd' }); svg.appendChild(g);
     const labels = [];
@@ -3382,7 +3433,7 @@ const COUNT_WORD = ['하나!','둘!','셋!','넷!','다섯!','여섯!','일곱!'
       if (!b.cur) return; const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
       for (const ev of evs) b.cur._st.push(pt(ev)); b.cur.setAttribute('d', dpath(b.cur._st));
     });
-    const up = () => { if (!b.cur) return; b.cur = null; if (guide) check(b); };
+    const up = e => { if (!b.cur) return; if (e && e.kkPalm) { b.cur.remove(); b.strokes.pop(); b.cur = null; return; } b.cur = null; if (guide) check(b); };
     svg.addEventListener('pointerup', up); svg.addEventListener('pointercancel', up);
     return b;
   }
@@ -4211,7 +4262,7 @@ function lightFingers(container, count, gap = 400) {
   });
   $('trSave2').addEventListener('click', () => $('trSave').click());
   // 그리기
-  const svg = $('trSvg');
+  const svg = $('trSvg'); svg.classList.add('ink');
   const pt = e => { const r = svg.getBoundingClientRect(); return [(e.clientX - r.left) / r.width * 100, (e.clientY - r.top) / r.height * 100]; };
   svg.addEventListener('pointerdown', e => {
     if (solved) return; e.preventDefault(); svg.setPointerCapture(e.pointerId);
@@ -4224,8 +4275,10 @@ function lightFingers(container, count, gap = 400) {
     for (const ev of evs) cur._s.pts.push(pt(ev));
     cur.setAttribute('d', d(cur._s.pts));
   });
-  const up = () => {
-    if (!cur) return; cur = null;
+  const up = e => {
+    if (!cur) return;
+    if (e && e.kkPalm) { cur.remove(); strokesU.pop(); cur = null; return; }  // 손바닥 획은 버려요
+    cur = null;
     if (lv === 1) {
       const [ok, msg] = judge();
       if (ok) success(); else if (coverage() > .3) $('trMsg').textContent = msg;
@@ -4283,7 +4336,7 @@ let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTime
 
 renderStickers(); renderPet();
 
-const APP_VERSION = 54;  // sw.js의 kokkok-v 숫자와 같게
+const APP_VERSION = 56;  // sw.js의 kokkok-v 숫자와 같게
 $('verNote').textContent = '버전 ' + APP_VERSION;
 // 어른용: 새 버전 받기 (아래로 당겨 새로고침은 아이가 놀다 실수로 하지 않게 막혀 있어요)
 $('updBtn').addEventListener('click', async () => {
