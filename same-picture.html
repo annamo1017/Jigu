@@ -463,6 +463,7 @@
   .tools { display: flex; gap: 8px; align-items: center; }
   .tool { border: none; background: #fff; border-radius: 16px; height: 46px; min-width: 46px; font-size: 22px; box-shadow: 0 3px 0 rgba(0,0,0,.08); padding: 0 8px; }
   .tool.on { background: #ffd84d; }
+  #trTools .tool { white-space: nowrap; }
   .sizes { display: flex; gap: 6px; justify-content: center; align-items: center; padding: 4px 0 0; flex: none; }
   .szb { width: 44px; height: 44px; border-radius: 14px; border: none; background: #fff; box-shadow: 0 3px 0 rgba(0,0,0,.08); display: flex; align-items: center; justify-content: center; padding: 0; }
   .szb i { display: block; border-radius: 50%; background: #5a3e2b; }
@@ -657,7 +658,7 @@
   <div class="trwrap" id="trWrap"><svg class="trmodel hidden" id="trModel" viewBox="0 0 100 100"></svg><svg class="wsvg trsvg" id="trSvg" viewBox="0 0 100 100"></svg></div>
   <div class="msg" id="trMsg"></div>
   <div class="tools hidden" id="trNextRow" style="padding-bottom:4px"><button class="tool" id="trNext" style="background:#6cc56c;color:#fff;font-size:18px;padding:0 22px">다음 그림 ▶</button><button class="tool" id="trSave2" style="font-size:16px">💾 저장</button></div>
-  <div class="tools" id="trTools" style="padding-bottom:4px"><button class="tool" id="trClear">🔄 지우기</button><button class="tool" id="trSkip">⏭️ 다른 그림</button><button class="tool" id="trDone">✅ 다 했어요</button><button class="tool" id="trSave">💾</button></div>
+  <div class="tools" id="trTools" style="padding-bottom:4px"><button class="tool" id="trErase">🧽 지우개</button><button class="tool" id="trClear">🗑️ 모두</button><button class="tool" id="trSkip">⏭️ 다음</button><button class="tool" id="trDone">✅ 다 했어</button><button class="tool" id="trSave">💾</button></div>
   <div class="sizes" id="trSizes"></div>
   <div class="palette" id="trPal"></div>
 </section>
@@ -4234,7 +4235,7 @@ function lightFingers(container, count, gap = 400) {
     $('trace').style.setProperty('--mb', m + 'px'); $('trace').style.setProperty('--tb', Math.max(160, b) + 'px');
   }
   function load() {
-    strokesU = []; solved = false; $('trNextRow').classList.add('hidden'); $('trTools').classList.remove('hidden');
+    strokesU = []; solved = false; $('trNextRow').classList.add('hidden'); $('trTools').classList.remove('hidden'); setErase(false);
     $('trModel').classList.toggle('hidden', lv !== 2);
     sizeBox(); render(); renderModel();
     const name = lv === 1 ? order[k][0] : order[k][0];
@@ -4268,18 +4269,30 @@ function lightFingers(container, count, gap = 400) {
   // 그리기
   const svg = $('trSvg'); svg.classList.add('ink');
   const pt = e => { const r = svg.getBoundingClientRect(); return [(e.clientX - r.left) / r.width * 100, (e.clientY - r.top) / r.height * 100]; };
+  // 지우개: 문지른 곳에 닿은 선을 한 줄씩 지워요
+  let erasing = false, rubbing = false;
+  function rub(p) {
+    const before = strokesU.length;
+    strokesU = strokesU.filter(st => !st.pts.some(q => Math.hypot(q[0] - p[0], q[1] - p[1]) < 5 + (st.w || 3) / 2));
+    if (strokesU.length !== before) { render(); SND.pop(); }
+  }
+  function setErase(on) { erasing = on; $('trErase').classList.toggle('on', on); }
+  $('trErase').addEventListener('click', () => { setErase(!erasing); SND.tap(); if (erasing) $('trMsg').textContent = '🧽 지우고 싶은 선을 문질러요'; });
   svg.addEventListener('pointerdown', e => {
     if (solved) return; e.preventDefault(); svg.setPointerCapture(e.pointerId);
+    if (erasing) { rubbing = true; rub(pt(e)); return; }
     const s = { pts: [pt(e)], c: INK[ink], w: TW[tw] }; strokesU.push(s);
     cur = el('path', { d: d(s.pts), stroke: s.c, 'stroke-width': s.w, fill: 'none', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }); svg.appendChild(cur); cur._s = s;
   });
   svg.addEventListener('pointermove', e => {
+    if (rubbing) { rub(pt(e)); return; }
     if (!cur) return;
     const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
     for (const ev of evs) cur._s.pts.push(pt(ev));
     cur.setAttribute('d', d(cur._s.pts));
   });
   const up = e => {
+    if (rubbing) { rubbing = false; return; }
     if (!cur) return;
     if (e && e.kkPalm) { cur.remove(); strokesU.pop(); cur = null; return; }  // 손바닥 획은 버려요
     cur = null;
@@ -4291,7 +4304,7 @@ function lightFingers(container, count, gap = 400) {
   svg.addEventListener('pointerup', up); svg.addEventListener('pointercancel', up);
   function palette() {
     const p = $('trPal'); p.innerHTML = '';
-    INK.forEach((c, i) => { const b = document.createElement('button'); b.className = 'dot' + (i === ink ? ' on' : ''); b.style.setProperty('--col', c); b.addEventListener('click', () => { ink = i; palette(); SND.tap(); }); p.appendChild(b); });
+    INK.forEach((c, i) => { const b = document.createElement('button'); b.className = 'dot' + (i === ink ? ' on' : ''); b.style.setProperty('--col', c); b.addEventListener('click', () => { ink = i; setErase(false); palette(); SND.tap(); }); p.appendChild(b); });
   }
   $('trSave').addEventListener('click', () => {
     const R = 600, K = R / 100, out = document.createElement('canvas'); out.width = out.height = R; const o = out.getContext('2d');
@@ -4340,7 +4353,7 @@ let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTime
 
 renderStickers(); renderPet();
 
-const APP_VERSION = 58;  // sw.js의 kokkok-v 숫자와 같게
+const APP_VERSION = 59;  // sw.js의 kokkok-v 숫자와 같게
 $('verNote').textContent = '버전 ' + APP_VERSION;
 // 어른용: 새 버전 받기 (아래로 당겨 새로고침은 아이가 놀다 실수로 하지 않게 막혀 있어요)
 $('updBtn').addEventListener('click', async () => {
