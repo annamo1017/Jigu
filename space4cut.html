@@ -125,11 +125,11 @@ input[type=text]{font:inherit;color:var(--ink);background:#0b0d12;border:1px sol
           <button type="button" class="primary" id="saveBtn" disabled>인화용 이미지 저장</button>
           <button type="button" id="shareBtn" hidden disabled>사진첩·프린터 앱으로 보내기</button>
         </div>
-        <span class="lab">가장자리 잘림 보정 (여백 없이 인쇄할 때 프린터가 테두리를 조금 잘라냅니다)</span>
+        <span class="lab">가장자리 잘림 보정 (셀피는 특히 오른쪽과 아래를 잘라냅니다)</span>
         <div class="row" id="safeBtns">
-          <button type="button" id="safe-0" data-v="1" aria-pressed="false">끄기</button>
-          <button type="button" id="safe-1" data-v="0.94" aria-pressed="true">보통</button>
-          <button type="button" id="safe-2" data-v="0.90" aria-pressed="false">크게</button>
+          <button type="button" id="safe-0" data-v="0" aria-pressed="false">끄기</button>
+          <button type="button" id="safe-1" data-v="1" aria-pressed="true">보통</button>
+          <button type="button" id="safe-2" data-v="2" aria-pressed="false">크게</button>
         </div>
         <p id="status" role="status" aria-live="polite">사진 4컷을 모두 찍으면 저장할 수 있습니다.</p>
         <p class="hint">저장이 안 되면 미리보기 이미지를 길게 눌러 저장하세요. SELPHY Photo Layout 앱에서 엽서 크기, 여백 없음으로 인쇄합니다. 양끝 절취선을 뜯고 점선을 따라 자르세요.</p>
@@ -351,7 +351,12 @@ function bottomText(c){
   c.fillStyle="#fbf8f1";fit(c,"shot on "+ymd(d),"600",ROUND,28,right-x);c.fillText("shot on "+ymd(d),x,BOT+152);
   var y=BOT+186;
   if(state.name){c.fillStyle="#f1ece2";fit(c,state.name,"400",DODUM,23,right-x);c.fillText(state.name,x,y);y+=32}
-  c.fillStyle="rgba(176,208,240,.92)";fitSpaced(c,MILESTONE,"500 %px "+ROUND,13,1,right-x);spaced(c,MILESTONE,x,y,1,"left");
+  c.fillStyle="rgba(176,208,240,.92)";
+  /* 좁은 스트립(3명)에서는 한 줄에 다 안 들어가므로 두 줄로 나눈다 */
+  function spw(t,sz){c.font="500 "+sz+"px "+ROUND;return Array.from(t).reduce(function(a,ch){return a+c.measureText(ch).width},0)+(Array.from(t).length-1)}
+  if(spw(MILESTONE,11)<=right-x){fitSpaced(c,MILESTONE,"500 %px "+ROUND,13,1,right-x);spaced(c,MILESTONE,x,y,1,"left")}
+  else{var m1="MILESTONE 2026.11.18",m2="25,900,000,000 km";
+    fitSpaced(c,m1,"500 %px "+ROUND,13,1,right-x);spaced(c,m1,x,y,1,"left");spaced(c,m2,x,y+18,1,"left")}
   c.restore();
 }
 /* 스트립 한 줄 그리기. live: 지금 찍는 칸 번호, src: 카메라 영상 */
@@ -374,7 +379,8 @@ var out=document.createElement("canvas");out.width=W;out.height=H;var octx=out.g
 var full=document.createElement("canvas");full.width=W;full.height=H;var fctx=full.getContext("2d");
 /* 여백 없는 인쇄는 프린터가 가장자리를 몇 mm 잘라낸다. 디자인 전체를 조금 줄여 가운데에 놓고,
    바깥 테두리는 디자인 가장자리 색을 늘여 채운다(잘려 나가도 되는 부분). */
-var SAFE=0.94;
+/* 셀피는 오른쪽·아래를 더 많이 잘라낸다(실제 인쇄물로 확인). [왼쪽, 위, 오른쪽, 아래] 여백(px, 300dpi 기준 12px≈1mm) */
+var MARGINS=[[0,0,0,0],[24,24,66,60],[36,36,96,90]],SAFEI=1;
 var strip=document.createElement("canvas"),sctx=strip.getContext("2d");
 var previewUrl=null,timer=null;
 function render(){
@@ -383,9 +389,9 @@ function render(){
   for(var k=0;k<COPIES;k++)fctx.drawImage(strip,k*SW,0);
   fctx.save();fctx.strokeStyle="rgba(255,255,255,.55)";fctx.lineWidth=2;fctx.setLineDash([10,10]);
   for(k=1;k<COPIES;k++){fctx.beginPath();fctx.moveTo(k*SW,0);fctx.lineTo(k*SW,H);fctx.stroke()}fctx.restore();
-  var w=Math.round(W*SAFE),h=Math.round(H*SAFE),dx=Math.round((W-w)/2),dy=Math.round((H-h)/2);
+  var M=MARGINS[SAFEI],sc=Math.min((W-M[0]-M[2])/W,(H-M[1]-M[3])/H),w=Math.round(W*sc),h=Math.round(H*sc),dx=M[0],dy=M[1];
   octx.clearRect(0,0,W,H);
-  if(dx>0){
+  if(sc<1){
     /* 바깥 테두리는 디자인 가장자리 띠의 평균색으로 채운다 (별 줄무늬·어두운 띠가 생기지 않도록) */
     function avg(x,y,ww,hh){var d=fctx.getImageData(x,y,ww,hh).data,r=0,g=0,bl=0,n=d.length/4;
       for(var i=0;i<d.length;i+=4){r+=d[i];g+=d[i+1];bl+=d[i+2]}return "rgb("+Math.round(r/n)+","+Math.round(g/n)+","+Math.round(bl/n)+")"}
@@ -399,17 +405,17 @@ function render(){
   octx.drawImage(full,0,0,W,H,dx,dy,w,h);
   /* 자르는 점선을 종이 끝까지 */
   octx.save();octx.strokeStyle="rgba(255,255,255,.55)";octx.lineWidth=2;octx.setLineDash([10,10]);
-  for(var j=1;j<COPIES;j++){var lx=dx+j*SW*SAFE;octx.beginPath();octx.moveTo(lx,0);octx.lineTo(lx,dy);octx.moveTo(lx,dy+h);octx.lineTo(lx,H);octx.stroke()}octx.restore();
+  for(var j=1;j<COPIES;j++){var lx=dx+j*SW*sc;octx.beginPath();octx.moveTo(lx,0);octx.lineTo(lx,dy);octx.moveTo(lx,dy+h);octx.lineTo(lx,H);octx.stroke()}octx.restore();
   clearTimeout(timer);
   timer=setTimeout(function(){out.toBlob(function(b){if(!b)return;var u=URL.createObjectURL(b);$("preview").src=u;if(previewUrl)URL.revokeObjectURL(previewUrl);previewUrl=u},"image/jpeg",.9)},120);
 }
 
 /* ---------- 조작 ---------- */
 function say(t){$("status").textContent=t}
-$("safeBtns").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;SAFE=+b.getAttribute("data-v");
+$("safeBtns").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;SAFEI=+b.getAttribute("data-v");
   Array.prototype.forEach.call(this.querySelectorAll("button"),function(x){x.setAttribute("aria-pressed",String(x===b))});
-  try{localStorage.setItem("space4cut-safe",String(SAFE))}catch(err){}render()});
-try{var sv=localStorage.getItem("space4cut-safe");if(sv){SAFE=+sv;Array.prototype.forEach.call(document.querySelectorAll("#safeBtns button"),function(x){x.setAttribute("aria-pressed",String(+x.getAttribute("data-v")===SAFE))})}}catch(err){}
+  try{localStorage.setItem("space4cut-safe2",String(SAFEI))}catch(err){}render()});
+try{var sv=localStorage.getItem("space4cut-safe2");if(sv!==null){SAFEI=+sv;Array.prototype.forEach.call(document.querySelectorAll("#safeBtns button"),function(x){x.setAttribute("aria-pressed",String(+x.getAttribute("data-v")===SAFEI))})}}catch(err){}
 function buildFrameButtons(boxId,w,h,onPick){
   var box=$(boxId);box.innerHTML="";
   frames.forEach(function(f,idx){
