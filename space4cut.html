@@ -145,6 +145,7 @@ input[type=text]{font:inherit;color:var(--ink);background:#0b0d12;border:1px sol
   <div class="row" style="justify-content:center">
     <button type="button" class="primary" id="shootBtn">3초 뒤 찍기</button>
     <button type="button" id="flipBtn">카메라 전환</button>
+    <button type="button" id="mirrorBtn" aria-pressed="true">좌우반전 켬</button>
     <button type="button" id="camCancel">닫기</button>
   </div>
   <div id="scenes" aria-label="프레임 바꾸기"></div>
@@ -460,13 +461,17 @@ $("clearBtn").addEventListener("click",function(){for(var i=0;i<4;i++)setPhoto(i
 var live=$("live"),lctx=live.getContext("2d"),video=$("video"),K,CROP;
 function camScale(){K=live.width/SW;CROP=Math.min(SH,live.height/K)}
 var stream=null,running=false,shooting=false,cut=0,facing="user";
+/* 좌우반전: 기본은 앞 카메라 켬(거울처럼), 뒤 카메라 끔. 직접 바꾸면 그 태블릿에 기억 */
+var mirror=true;
+try{var mv=localStorage.getItem("space4cut-mirror");if(mv!==null)mirror=mv==="1"}catch(err){}
+function mirrorUI(){var b=$("mirrorBtn");b.setAttribute("aria-pressed",String(mirror));b.textContent="좌우반전 "+(mirror?"켬":"끔")}
 function sleep(ms){return new Promise(function(r){setTimeout(r,ms)})}
 function camUI(){$("camInfo").textContent=(cut+1)+" / 4컷  ·  "+frames[state.frame].name}
 function tick(){
   if(!running)return;
   var cy=Math.max(0,Math.min(SH-CROP,winY(cut)+WH/2-CROP/2));lctx.clearRect(0,0,live.width,live.height);
   lctx.setTransform(K,0,0,K,0,-cy*K);
-  drawStrip(lctx,cut,video.readyState>=2&&video.videoWidth?video:null,facing==="user");
+  drawStrip(lctx,cut,video.readyState>=2&&video.videoWidth?video:null,mirror);
   lctx.setTransform(1,0,0,1,0,0);
   requestAnimationFrame(tick);
 }
@@ -486,14 +491,16 @@ async function openCam(i){
 }
 $("startBtn").addEventListener("click",function(){var n=state.photos.indexOf(null);openCam(n<0?0:n)});
 $("camCancel").addEventListener("click",closeCam);
-$("flipBtn").addEventListener("click",async function(){facing=facing==="user"?"environment":"user";stopStream();if(!(await startStream())){facing="user";await startStream()}});
+$("flipBtn").addEventListener("click",async function(){facing=facing==="user"?"environment":"user";mirror=facing==="user";mirrorUI();stopStream();if(!(await startStream())){facing="user";mirror=true;mirrorUI();await startStream()}});
+$("mirrorBtn").addEventListener("click",function(){mirror=!mirror;mirrorUI();try{localStorage.setItem("space4cut-mirror",mirror?"1":"0")}catch(err){}});
+mirrorUI();
 $("shootBtn").addEventListener("click",async function(){
   if(shooting)return;shooting=true;
   for(var n=3;n>0&&running;n--){$("count").textContent=n;await sleep(1000)}
   $("count").textContent="";
   if(running&&video.videoWidth){
     var cv=document.createElement("canvas");cv.width=PW;cv.height=PH;var c=cv.getContext("2d");
-    if(facing==="user"){c.translate(PW,0);c.scale(-1,1)}cover(c,video,0,0,PW,PH);
+    if(mirror){c.translate(PW,0);c.scale(-1,1)}cover(c,video,0,0,PW,PH);
     setPhoto(cut,cv);
     $("camBox").classList.add("flash");await sleep(150);$("camBox").classList.remove("flash");await sleep(500);
     var next=state.photos.indexOf(null);
