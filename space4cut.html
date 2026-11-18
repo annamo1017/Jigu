@@ -54,7 +54,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .fields label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
 input[type=text]{font:inherit;color:var(--ink);background:#0b0d12;border:1px solid var(--line);border-radius:8px;min-height:44px;padding:8px 12px;width:100%}
 .slots{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
-.slot{padding:0;aspect-ratio:52/30;position:relative;overflow:hidden;flex-direction:column;border-style:dashed}
+.slot{padding:0;aspect-ratio:520/300;position:relative;overflow:hidden;flex-direction:column;border-style:dashed}
 .slot.has{border-style:solid;border-color:var(--dot)}
 .slot canvas{position:absolute;inset:0;width:100%;height:100%}
 .slot span{position:relative;font-size:13px;text-shadow:0 1px 4px #000}
@@ -86,17 +86,24 @@ input[type=text]{font:inherit;color:var(--ink);background:#0b0d12;border:1px sol
 <div class="wrap">
   <header>
     <h1>우주네컷</h1>
-    <p>보이저 1호 1광일 돌파 기념 · 2026.11.18 · 셀피 엽서 용지(100×148mm) → 반으로 잘라 2줄</p>
+    <p>보이저 1호 1광일 돌파 기념 · 2026.11.18 · 셀피 엽서 용지(100×148mm) · 1명 / 2명 / 3명 인쇄</p>
   </header>
   <main>
     <div class="paper">
       <img id="preview" alt="인화 미리보기: 같은 네컷 스트립 2줄">
-      <small>엽서 용지 한 장에 같은 스트립 2줄. 가운데 점선을 잘라 나눠 가지세요.</small>
+      <small id="paperNote">엽서 용지 한 장에 같은 스트립 2줄. 점선을 잘라 둘이 나눠 가지세요.</small>
     </div>
 
     <div class="steps">
       <section aria-labelledby="h-frame">
-        <h2 id="h-frame"><b>1</b>프레임 고르고 한 마디 쓰기</h2>
+        <h2 id="h-frame"><b>1</b>인쇄 방식·프레임 고르고 한 마디 쓰기</h2>
+        <span class="lab">인쇄 방식 (엽서 용지 한 장)</span>
+        <div class="row" id="layouts">
+          <button type="button" id="ly-1" data-n="1" aria-pressed="false">혼자 갖기 (한 장 통째)</button>
+          <button type="button" id="ly-2" data-n="2" aria-pressed="true">2명이 나눠 갖기 (2줄)</button>
+          <button type="button" id="ly-3" data-n="3" aria-pressed="false">3명이 나눠 갖기 (3줄)</button>
+        </div>
+        <span class="lab">프레임</span>
         <div id="frames"></div>
         <div class="fields">
           <label for="name">이름 (예: 3-2 김보이 · 이우주)<input type="text" id="name" maxlength="22" placeholder="비워 두어도 됩니다"></label>
@@ -119,7 +126,7 @@ input[type=text]{font:inherit;color:var(--ink);background:#0b0d12;border:1px sol
           <button type="button" id="shareBtn" hidden disabled>사진첩·프린터 앱으로 보내기</button>
         </div>
         <p id="status" role="status" aria-live="polite">사진 4컷을 모두 찍으면 저장할 수 있습니다.</p>
-        <p class="hint">저장이 안 되면 미리보기 이미지를 길게 눌러 저장하세요. SELPHY Photo Layout 앱에서 엽서 크기, 여백 없음으로 인쇄합니다. 양끝 절취선을 뜯고 가운데 점선을 자르세요.</p>
+        <p class="hint">저장이 안 되면 미리보기 이미지를 길게 눌러 저장하세요. SELPHY Photo Layout 앱에서 엽서 크기, 여백 없음으로 인쇄합니다. 양끝 절취선을 뜯고 점선을 따라 자르세요.</p>
       </section>
 
     </div>
@@ -141,10 +148,23 @@ input[type=text]{font:inherit;color:var(--ink);background:#0b0d12;border:1px sol
 (function(){
 "use strict";
 /* 인화지 = 스트립(600x1776) 두 줄. 가장자리 글자는 4mm 이상 안쪽에 둔다 */
-var W=1200,H=1776,SW=600,SH=1776;   /* 캐논 셀피 엽서 100x148mm 비율 */
-var WX=40,WW=520,WH=300,WY0=182,STEP=310;   /* 사진 칸 4개 */
-var BOT=WY0+3*STEP+WH;                       /* 1592: 아래 글자 영역 시작 */
-var PW=1040,PH=600;                          /* 저장되는 한 컷 해상도 */
+var W=1200,H=1776,SH=1776;                  /* 캐논 셀피 엽서 100x148mm 비율 */
+var WY0=182,BOT=1412;                         /* 사진 칸 시작, 아래 글자 영역 시작 (모든 방식 공통) */
+/* 인쇄 방식: 1명(한 장 통째, 2x2) / 2명(세로 스트립 2줄) / 3명(세로 스트립 3줄) */
+var LAYOUTS={
+  1:{SW:1200,WX:60,cols:2,gapX:24,gapY:24},
+  2:{SW:600, WX:40,cols:1,gapX:0, gapY:10},
+  3:{SW:400, WX:30,cols:1,gapX:0, gapY:10}
+};
+var COPIES=2,SW,WX,WW,WH,COLS,GX,GY,S,TS,PW=1040,PH;
+function setLayout(n){
+  var L=LAYOUTS[n];COPIES=n;SW=L.SW;WX=L.WX;COLS=L.cols;GX=L.gapX;GY=L.gapY;
+  var rows=4/COLS;WW=(SW-2*WX-(COLS-1)*GX)/COLS;WH=(BOT-WY0-(rows-1)*GY)/rows;
+  S=Math.min(1.25,SW/600);              /* 아래쪽 사진(행성 등) 크기 비율 */
+  TS=Math.max(1,Math.min(1.35,SW/600)); /* 제목 글씨 크기 비율 */
+  PH=Math.round(PW*WH/WW);
+}
+setLayout(2);
 var $=function(id){return document.getElementById(id)};
 var DODUM="'Gowun Dodum','IBM Plex Sans KR',sans-serif";
 var SERIF="'Cormorant Garamond',Georgia,'Times New Roman',serif",PEN="'Nanum Pen Script','Gaegu',cursive",BATANG="'Gowun Batang','Nanum Myeongjo',serif";
@@ -161,7 +181,8 @@ function cover(c,img,x,y,w,h,ax,ay){var iw=img.videoWidth||img.naturalWidth||img
 function rr(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath()}
 function label(c,text,x,y,w,col){if(!text)return;c.fillStyle=col;c.font="600 20px "+BODY;c.textAlign="left";c.textBaseline="middle";c.fillText(text,x,y)}
 function fit(c,text,weight,family,size,maxW){do{c.font=weight+" "+size+"px "+family;size-=1}while(c.measureText(text).width>maxW&&size>10)}
-function winY(i){return WY0+i*STEP}
+function win(i){var col=i%COLS,row=Math.floor(i/COLS);return {x:WX+col*(WW+GX),y:WY0+row*(WH+GY)}}
+function winY(i){return win(i).y}
 function spaced(c,text,x,y,sp,align){
   var chars=Array.from(text),w=chars.reduce(function(a,ch){return a+c.measureText(ch).width},0)+sp*(chars.length-1);
   var cx=align==="center"?x-w/2:(align==="right"?x-w:x);c.textAlign="left";
@@ -242,14 +263,14 @@ function drawSaturn(c,cx,cy,r){
   [-.55,-.25,.05,.3,.6].forEach(function(t,i){c.fillStyle=i%2?"rgba(120,85,45,.22)":"rgba(255,245,220,.16)";c.fillRect(-r,t*r,2*r,.13*r)});c.restore();
   ring(0,Math.PI);
 }
-var PX=465,PY=BOT+212;
+var PY=BOT+212;function PXf(){return SW-135*S}
 function photoPlanet(c,im,box,x0,y0,w){
   if(!ready(im))return false;var k=w/(box[1]-box[0]);
   c.save();c.globalCompositeOperation="screen";c.drawImage(im,x0-box[0]*k,y0-box[2]*k,im.naturalWidth*k,im.naturalHeight*k);c.restore();return true;
 }
 var JBOX=[54, 366, 44, 354],SBOX=[20, 874, 50, 524];   /* 아래쪽 행성 자리 */
 var frames=[
-  {id:"pale",name:"창백한 푸른 점",title:"pale blue dot",credit:"IMAGE NASA/JPL · PIA00452 · "+SITE,right:560,bg:function(c){
+  {id:"pale",name:"창백한 푸른 점",title:"pale blue dot",credit:"IMAGE NASA/JPL · PIA00452 · "+SITE,rw:40,bg:function(c){
     /* 원본 사진(PIA00452, 지구에 동그라미 표시)을 아래쪽에 깔고, 위쪽은 사진의 검은 우주색으로 이어 칠한다 */
     c.fillStyle="#070308";c.fillRect(0,0,SW,SH);
     var im=IMG.pbd,k=SW/im.naturalWidth,ex=233.5,ey=205.0,ty=SH-104;
@@ -259,14 +280,14 @@ var frames=[
     var x=ex*k,r=13*k;c.save();c.shadowColor="rgba(0,0,0,.9)";c.shadowBlur=6;c.fillStyle="rgba(205,226,248,.95)";c.font="500 17px "+ROUND;c.textAlign="left";c.textBaseline="middle";
     c.fillText("earth",x+r+8,ty-r-6);c.restore();
   }},
-  {id:"jupiter",name:"목성",title:"jupiter",credit:"IMAGE NASA/JPL · PIA01509 · "+SITE,right:330,bg:function(c){
-    c.fillStyle="#04050a";c.fillRect(0,0,SW,SH);stars(c,0,0,SW,SH,380,11);shade(c);if(!photoPlanet(c,IMG.jup,JBOX,PX-116,PY-122,232))drawJupiter(c,PX,PY,118)}},
-  {id:"saturn",name:"토성",title:"saturn",credit:"IMAGE NASA/JPL · PIA01969 · "+SITE,right:300,bg:function(c){
-    c.fillStyle="#04050a";c.fillRect(0,0,SW,SH);stars(c,0,0,SW,SH,380,31);shade(c);if(!photoPlanet(c,IMG.sat,SBOX,316,BOT+166,264))drawSaturn(c,PX-10,PY-5,58)}},
-  {id:"record",name:"골든 레코드",title:"golden record",credit:"IMAGE NASA/JPL · GPN-2000-001978 · nasa.gov",right:330,bg:function(c){
+  {id:"jupiter",name:"목성",title:"jupiter",credit:"IMAGE NASA/JPL · PIA01509 · "+SITE,rw:270,bg:function(c){
+    c.fillStyle="#04050a";c.fillRect(0,0,SW,SH);stars(c,0,0,SW,SH,380,11);shade(c);if(!photoPlanet(c,IMG.jup,JBOX,SW-251*S,PY-120*S,232*S))drawJupiter(c,PXf(),PY,118*S)}},
+  {id:"saturn",name:"토성",title:"saturn",credit:"IMAGE NASA/JPL · PIA01969 · "+SITE,rw:300,bg:function(c){
+    c.fillStyle="#04050a";c.fillRect(0,0,SW,SH);stars(c,0,0,SW,SH,380,31);shade(c);if(!photoPlanet(c,IMG.sat,SBOX,SW-284*S,PY-46-30*S,264*S))drawSaturn(c,PXf()-10,PY-5,58*S)}},
+  {id:"record",name:"골든 레코드",title:"golden record",credit:"IMAGE NASA/JPL · GPN-2000-001978 · nasa.gov",rw:270,bg:function(c){
     c.fillStyle="#04050a";c.fillRect(0,0,SW,SH);stars(c,0,0,SW,SH,400,57);shade(c);
     /* 보이저 1호에 실려 간 골든 레코드 덮개 (실제 사진) */
-    var cx=470,cy=BOT+208,r=110,im=IMG.rec;
+    var cx=SW-130*S,cy=BOT+208,r=110*S,im=IMG.rec;
     var g=c.createRadialGradient(cx,cy,r*.9,cx,cy,r*1.5);g.addColorStop(0,"rgba(240,200,110,.28)");g.addColorStop(1,"rgba(240,200,110,0)");
     c.fillStyle=g;c.beginPath();c.arc(cx,cy,r*1.5,0,6.283);c.fill();
     if(ready(im))c.drawImage(im,cx-r,cy-r,2*r,2*r);
@@ -283,20 +304,20 @@ function liftBlacks(c){
     c.putImageData(d,0,0)}catch(e){}
 }
 function base(idx){
-  var f=frames[idx];if(cache[f.id])return cache[f.id];
+  var f=frames[idx],key=f.id+"_"+SW;if(cache[key])return cache[key];
   var cv=document.createElement("canvas");cv.width=SW;cv.height=SH;var c=cv.getContext("2d");
   f.bg(c);liftBlacks(c);
   c.save();c.shadowColor="rgba(0,0,0,.85)";c.shadowBlur=10;c.textBaseline="alphabetic";
-  c.fillStyle="rgba(214,230,248,.92)";fitSpaced(c,MOTTO,"500 %px "+ROUND,15,1.4,WW);spaced(c,MOTTO,SW/2,156,1.4,"center");
-  c.fillStyle="rgba(255,255,255,.72)";fitSpaced(c,f.credit,"500 %px "+ROUND,11,.6,WW);spaced(c,f.credit,SW/2,SH-40,.6,"center");
+  c.fillStyle="rgba(214,230,248,.92)";fitSpaced(c,MOTTO,"500 %px "+ROUND,15*TS,1.4*TS,SW-2*WX);spaced(c,MOTTO,SW/2,156,1.4*TS,"center");
+  c.fillStyle="rgba(255,255,255,.72)";fitSpaced(c,f.credit,"500 %px "+ROUND,11*TS,.6,SW-2*WX);spaced(c,f.credit,SW/2,SH-40,.6,"center");
   c.restore();
-  return cache[f.id]=cv;
+  return cache[key]=cv;
 }
 function titleText(c,text){
   /* 속이 빈 가는 흰 테두리 글씨 (Poppins) */
   if(!text)return;c.save();c.textBaseline="alphabetic";c.textAlign="center";c.lineJoin="round";
-  fit(c,text,"600",ROUND,52,WW-20);
-  c.shadowColor="rgba(0,0,0,.5)";c.shadowBlur=6;c.strokeStyle="#fff";c.lineWidth=1.4;c.strokeText(text,SW/2,108);
+  fit(c,text,"600",ROUND,52*TS,SW-2*WX-20);c.lineWidth=1.4*TS;
+  c.shadowColor="rgba(0,0,0,.5)";c.shadowBlur=6;c.strokeStyle="#fff";c.strokeText(text,SW/2,108);
   c.shadowBlur=0;c.strokeText(text,SW/2,108);c.restore();
 }
 function wrap(c,text,maxW){
@@ -308,15 +329,16 @@ function wrap(c,text,maxW){
     if(cur)lines.push(cur);cur="";
     Array.from(word).forEach(function(ch){if(c.measureText(cur+ch).width>maxW&&cur){lines.push(cur);cur=ch}else cur+=ch});
   });
-  if(cur)lines.push(cur);return lines.slice(0,2);
+  if(cur)lines.push(cur);return lines;
 }
 function bottomText(c){
-  var d=state.shotDate||new Date(),x=50,right=frames[state.frame].right||SW-WX;
+  var d=state.shotDate||new Date(),x=Math.min(50,WX+10),fr=frames[state.frame],right=SW-(fr.rw==null?WX:fr.rw*S)-10;
   c.save();c.shadowColor="rgba(0,0,0,.95)";c.shadowBlur=8;c.textBaseline="alphabetic";
   if(state.msg){
-    c.fillStyle="#fff4d2";c.textAlign="center";c.font="44px "+PEN;
-    var lines=wrap(c,"“"+state.msg+"”",WW);if(lines.length===2&&c.measureText(lines[1]).width>WW)lines=wrap(c,state.msg,WW);
-    lines.forEach(function(l,i){c.fillText(l,SW/2,BOT+52+i*40)});
+    c.fillStyle="#fff4d2";c.textAlign="center";
+    var mw=SW-2*WX,fs=46,txt="\u201C"+state.msg+"\u201D",lines;
+    do{fs-=2;c.font=fs+"px "+PEN;lines=wrap(c,txt,mw)}while(lines.length>2&&fs>22);
+    lines.slice(0,2).forEach(function(l,i){c.fillText(l,SW/2,BOT+52+i*(fs-4))});
   }
   c.textAlign="left";
   c.fillStyle="#fbf8f1";fit(c,"shot on "+ymd(d),"600",ROUND,28,right-x);c.fillText("shot on "+ymd(d),x,BOT+152);
@@ -330,24 +352,26 @@ function drawStrip(c,live,src,mirror){
   c.drawImage(base(state.frame),0,0);
   titleText(c,frames[state.frame].title);bottomText(c);
   for(var i=0;i<4;i++){
-    var y=winY(i),p=state.photos[i];
-    c.save();rr(c,WX,y,WW,WH,8);c.clip();
-    if(i===live&&src){c.fillStyle="#000";c.fillRect(WX,y,WW,WH);if(mirror){c.translate(2*WX+WW,0);c.scale(-1,1)}cover(c,src,WX,y,WW,WH)}
-    else if(p){cover(c,p,WX,y,WW,WH,.5,p._ay==null?.5:p._ay)}
-    else{c.fillStyle="rgba(5,8,14,.62)";c.fillRect(WX,y,WW,WH);c.fillStyle="rgba(255,255,255,.55)";c.font="500 110px "+ROUND;c.textAlign="center";c.textBaseline="middle";c.fillText(String(i+1),SW/2,y+WH/2+6)}
+    var w=win(i),x=w.x,y=w.y,p=state.photos[i];
+    c.save();rr(c,x,y,WW,WH,8);c.clip();
+    if(i===live&&src){c.fillStyle="#000";c.fillRect(x,y,WW,WH);if(mirror){c.translate(2*x+WW,0);c.scale(-1,1)}cover(c,src,x,y,WW,WH)}
+    else if(p){cover(c,p,x,y,WW,WH,.5,p._ay==null?.5:p._ay)}
+    else{c.fillStyle="rgba(5,8,14,.62)";c.fillRect(x,y,WW,WH);c.fillStyle="rgba(255,255,255,.55)";c.font="500 110px "+ROUND;c.textAlign="center";c.textBaseline="middle";c.fillText(String(i+1),x+WW/2,y+WH/2+6)}
     c.restore();
-    rr(c,WX,y,WW,WH,8);c.lineWidth=i===live?6:3;c.strokeStyle=i===live?"#9fc3ea":"rgba(255,255,255,.9)";c.stroke();
+    rr(c,x,y,WW,WH,8);c.lineWidth=i===live?6:3;c.strokeStyle=i===live?"#9fc3ea":"rgba(255,255,255,.9)";c.stroke();
   }
 }
 
 /* ---------- 인화지 ---------- */
 var out=document.createElement("canvas");out.width=W;out.height=H;var octx=out.getContext("2d");
-var strip=document.createElement("canvas");strip.width=SW;strip.height=SH;var sctx=strip.getContext("2d");
+var strip=document.createElement("canvas"),sctx=strip.getContext("2d");
 var previewUrl=null,timer=null;
 function render(){
+  if(strip.width!==SW){strip.width=SW;strip.height=SH}
   drawStrip(sctx,-1,null,false);
-  octx.drawImage(strip,0,0);octx.drawImage(strip,SW,0);
-  octx.save();octx.strokeStyle="rgba(255,255,255,.55)";octx.lineWidth=2;octx.setLineDash([10,10]);octx.beginPath();octx.moveTo(SW,0);octx.lineTo(SW,H);octx.stroke();octx.restore();
+  for(var k=0;k<COPIES;k++)octx.drawImage(strip,k*SW,0);
+  octx.save();octx.strokeStyle="rgba(255,255,255,.55)";octx.lineWidth=2;octx.setLineDash([10,10]);
+  for(k=1;k<COPIES;k++){octx.beginPath();octx.moveTo(k*SW,0);octx.lineTo(k*SW,H);octx.stroke()}octx.restore();
   clearTimeout(timer);
   timer=setTimeout(function(){out.toBlob(function(b){if(!b)return;var u=URL.createObjectURL(b);$("preview").src=u;if(previewUrl)URL.revokeObjectURL(previewUrl);previewUrl=u},"image/jpeg",.9)},120);
 }
@@ -358,8 +382,9 @@ function buildFrameButtons(boxId,w,h,onPick){
   var box=$(boxId);box.innerHTML="";
   frames.forEach(function(f,idx){
     var b=document.createElement("button");b.type="button";b.id=boxId+"-"+f.id;b.setAttribute("aria-pressed",String(idx===state.frame));
+    h=Math.round(w*SH/SW);
     var cv=document.createElement("canvas");cv.width=w;cv.height=h;var c=cv.getContext("2d");c.drawImage(base(idx),0,0,w,h);
-    c.fillStyle="rgba(5,8,14,.55)";for(var i=0;i<4;i++)c.fillRect(WX*w/SW,winY(i)*h/SH,WW*w/SW,WH*h/SH);
+    c.fillStyle="rgba(5,8,14,.55)";for(var i=0;i<4;i++){var q=win(i);c.fillRect(q.x*w/SW,q.y*h/SH,WW*w/SW,WH*h/SH)}
     b.appendChild(cv);b.appendChild(document.createTextNode(f.name));
     b.addEventListener("click",function(){onPick(idx)});box.appendChild(b)});
 }
@@ -368,7 +393,16 @@ function setFrame(idx){
   ["frames","scenes"].forEach(function(id){Array.prototype.forEach.call($(id).children,function(b,i){b.setAttribute("aria-pressed",String(i===idx))})});
   render();camUI();
 }
-function buildAll(){buildFrameButtons("frames",90,270,setFrame);buildFrameButtons("scenes",64,192,setFrame)}
+function buildAll(){var big=COPIES===1;buildFrameButtons("frames",big?150:90,0,setFrame);buildFrameButtons("scenes",big?110:64,0,setFrame)}
+var NOTES={1:"엽서 용지 한 장에 네컷 한 장. 자르지 않고 혼자 가져요.",2:"엽서 용지 한 장에 같은 스트립 2줄. 점선을 잘라 둘이 나눠 가지세요.",3:"엽서 용지 한 장에 같은 스트립 3줄. 점선 두 곳을 잘라 셋이 나눠 가지세요."};
+$("layouts").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;
+  setLayout(+b.getAttribute("data-n"));
+  Array.prototype.forEach.call(this.querySelectorAll("button"),function(x){x.setAttribute("aria-pressed",String(x===b))});
+  $("paperNote").textContent=NOTES[COPIES];
+  Array.prototype.forEach.call(document.querySelectorAll(".slot"),function(x){x.style.aspectRatio=WW+"/"+WH});
+  for(var i=0;i<4;i++)if(state.photos[i])setPhoto(i,state.photos[i]);
+  refresh();
+});
 $("msg").addEventListener("input",function(){state.msg=this.value.trim();render()});
 $("name").addEventListener("input",function(){state.name=this.value.trim();render()});
 
@@ -381,7 +415,7 @@ var slotBtns=[];
 function setPhoto(i,cv,when){
   state.photos[i]=cv;
   var b=slotBtns[i],t=b.querySelector("canvas");
-  if(cv){t.hidden=false;cover(t.getContext("2d"),cv,0,0,260,150,.5,cv._ay==null?.5:cv._ay);b.classList.add("has");b.querySelector("span").innerHTML="<b>"+(i+1)+"</b>다시 찍기"}
+  if(cv){t.hidden=false;t.width=260;t.height=Math.round(260*WH/WW);cover(t.getContext("2d"),cv,0,0,t.width,t.height,.5,cv._ay==null?.5:cv._ay);b.classList.add("has");b.querySelector("span").innerHTML="<b>"+(i+1)+"</b>다시 찍기"}
   else{t.hidden=true;b.classList.remove("has");b.querySelector("span").innerHTML="<b>"+(i+1)+"</b>찍기"}
   var n=state.photos.filter(Boolean).length;
   if(n===0)state.shotDate=null;else if(!state.shotDate)state.shotDate=when?new Date(when):new Date();
@@ -392,13 +426,14 @@ function setPhoto(i,cv,when){
 $("clearBtn").addEventListener("click",function(){for(var i=0;i<4;i++)setPhoto(i,null)});
 
 /* ---------- 카메라: 프레임이 씌워진 스트립을 보면서 찍기 ---------- */
-var live=$("live"),lctx=live.getContext("2d"),video=$("video"),K=live.width/SW,CROP=live.height/K;
+var live=$("live"),lctx=live.getContext("2d"),video=$("video"),K,CROP;
+function camScale(){K=live.width/SW;CROP=Math.min(SH,live.height/K)}
 var stream=null,running=false,shooting=false,cut=0,facing="user";
 function sleep(ms){return new Promise(function(r){setTimeout(r,ms)})}
 function camUI(){$("camInfo").textContent=(cut+1)+" / 4컷  ·  "+frames[state.frame].name}
 function tick(){
   if(!running)return;
-  var cy=Math.max(0,Math.min(SH-CROP,winY(cut)+WH/2-CROP/2));
+  var cy=Math.max(0,Math.min(SH-CROP,winY(cut)+WH/2-CROP/2));lctx.clearRect(0,0,live.width,live.height);
   lctx.setTransform(K,0,0,K,0,-cy*K);
   drawStrip(lctx,cut,video.readyState>=2&&video.videoWidth?video:null,facing==="user");
   lctx.setTransform(1,0,0,1,0,0);
@@ -414,7 +449,7 @@ function stopStream(){if(stream){stream.getTracks().forEach(function(t){t.stop()
 function closeCam(){running=false;stopStream();$("cam").hidden=true}
 async function openCam(i){
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){say("이 화면에서는 카메라를 쓸 수 없습니다. https 주소로 열었는지 확인하세요.");return}
-  cut=i;camUI();$("cam").hidden=false;$("count").textContent="";
+  cut=i;camScale();camUI();$("cam").hidden=false;$("count").textContent="";
   if(!stream&&!(await startStream())){closeCam();say("카메라를 켤 수 없습니다. 브라우저 주소창에서 카메라 허용을 눌렀는지 확인하세요.");return}
   if(!running){running=true;tick()}
 }
