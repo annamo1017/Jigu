@@ -321,7 +321,10 @@
   /* 같은 수 블록 */
   .bktarget { flex: 1; display: flex; align-items: flex-end; justify-content: center; padding: 10px 20px 14px; min-height: 0; background: #fff; border-radius: 26px; margin: 4px 0 12px; min-width: 220px; box-shadow: 0 5px 0 rgba(0,0,0,.07); max-height: 210px; }
   .bkchoices { flex: 1; width: 100%; max-width: 520px; display: flex; gap: 10px; justify-content: center; align-items: stretch; padding: 0 12px 18px; min-height: 0; max-height: 200px; }
-  .bkopt { flex: 1; border: 4px solid #fff; background: #fff; border-radius: 22px; box-shadow: 0 6px 0 rgba(0,0,0,.08); display: flex; align-items: flex-end; justify-content: center; padding: 10px 4px; }
+  .bktarget { position: relative; background: #fff6d6; border: 5px solid #ffb347; margin-top: 22px; }
+  .bktarget::before { content: '👀 이 블록이랑 같은 수!'; position: absolute; top: -18px; left: 50%; transform: translateX(-50%); background: #ff9f43; color: #fff; font-size: 16px; font-weight: 800; padding: 4px 14px; border-radius: 14px; white-space: nowrap; box-shadow: 0 3px 0 rgba(0,0,0,.12); }
+  .bkchoices { position: relative; }
+  .bkopt { flex: 1; border: 4px solid #e9e1d4; background: #fff; border-radius: 22px; box-shadow: 0 6px 0 rgba(0,0,0,.08); display: flex; align-items: flex-end; justify-content: center; padding: 10px 4px; }
   .bkopt.yes { border-color: #7ccf6a; background: #e6f9df; }
   .bkopt.no { animation: shake .4s; }
   .bkshape { display: grid; gap: 3px; }
@@ -4738,7 +4741,7 @@ let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTime
 
 renderStickers(); renderPet();
 
-const APP_VERSION = 63;  // sw.js의 kokkok-v 숫자와 같게
+const APP_VERSION = 65;  // sw.js의 kokkok-v 숫자와 같게
 $('verNote').textContent = '버전 ' + APP_VERSION;
 // 어른용: 새 버전 받기 (아래로 당겨 새로고침은 아이가 놀다 실수로 하지 않게 막혀 있어요)
 $('updBtn').addEventListener('click', async () => {
