@@ -1173,7 +1173,7 @@ function starRain(count = 90) {
    · 손가락만 쓸 때: 닿는 면이 넓으면(손바닥) 무시, 한 번에 한 손가락만 그려요 */
 (() => {
   const active = new Map(), rejected = new Set();
-  let lastPen = 0, told = false;
+  let lastPen = -1e9, told = false;
   const surf = e => e.target && e.target.closest && e.target.closest('.ink');
   const kill = e => { e.stopImmediatePropagation(); if (e.cancelable) e.preventDefault(); };
   document.addEventListener('pointerdown', e => {
@@ -1188,7 +1188,8 @@ function starRain(count = 90) {
       active.set(e.pointerId, { type: 'pen', el: e.target }); return;
     }
     if (e.pointerType === 'touch') {
-      const big = Math.max(e.width || 0, e.height || 0) > 38;
+      // 아이폰·아이패드는 손가락도 닿는 면이 40~60px로 크게 잡혀요 → 아주 넓을 때(손바닥)만 무시
+      const big = Math.max(e.width || 0, e.height || 0) > 100;
       const busy = [...active.values()].some(a => a.el.isConnected);
       if (performance.now() - lastPen < 3000 || big || busy) { rejected.add(e.pointerId); kill(e); return; }
     }
@@ -4741,7 +4742,7 @@ let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTime
 
 renderStickers(); renderPet();
 
-const APP_VERSION = 65;  // sw.js의 kokkok-v 숫자와 같게
+const APP_VERSION = 66;  // sw.js의 kokkok-v 숫자와 같게
 $('verNote').textContent = '버전 ' + APP_VERSION;
 // 어른용: 새 버전 받기 (아래로 당겨 새로고침은 아이가 놀다 실수로 하지 않게 막혀 있어요)
 $('updBtn').addEventListener('click', async () => {
